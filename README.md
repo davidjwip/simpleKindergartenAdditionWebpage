@@ -1,84 +1,124 @@
 # Math Practice for Kids
 
-A fun, interactive web application for children to practice addition and subtraction math problems.
+A fun, interactive web application for children to practice addition and subtraction math problems. Built with **Vue 3 + Vite**.
 
 ## Features
 
 - **Addition & Subtraction**: Toggle between + and − operators
-- **Multiple Difficulty Levels**: Practice with numbers up to 10 or 20
-- **Interactive Touchpad**: Click buttons to fill in answers (no keyboard needed!)
-- **Smart Problem Generation**: One field is hidden, user must solve for it
+- **Multiple Difficulty Levels**: Practice with numbers up to 10 or 20 (toggleable checkbox)
+- **Interactive Touchpad**: Click number buttons to fill in answers (no keyboard needed!)
+- **Smart Problem Generation**: One field is randomly hidden, user must solve for it
 - **Progress Tracking**: Track solved problems with visual progress bar
 - **Auto-Advance**: New problem loads automatically after 2 seconds on correct answer
-- **Audio Feedback**: Beep sounds for correct/incorrect answers
+- **Celebration Overlay**: 🎉 Reward screen + score reset every 10 correct answers
 - **Responsive Design**: Works on desktop and mobile devices
+
+## How to Run
+
+This is a modern Vite build — it must be **served***, not opened directly from disk.
+(Browsers block `file://` loading of ES modules via CORS, so double-clicking
+`index.html` will not work.)
+
+```bash
+npm install        # first time only
+npm run dev        # start the development server, then open http://localhost:5173
+```
+
+### Production build
+
+```bash
+npm run build      # outputs optimized files to dist/
+npm run preview    # serve the production build locally
+```
 
 ## How to Use
 
-1. Open `index.html` in your web browser
+1. Open the dev server URL (or the deployed site)
 2. Choose your operator (+ or −)
-3. Toggle between limit 10 and limit 20 using the checkbox
+3. Toggle between limit 10 and limit 20 using the "Limit to 20" checkbox
 4. Click numbers on the touchpad to fill in the empty field
-5. Check your answer automatically (or click "Check Answer" button)
+5. The game auto-checks your answer and advances after 2 seconds
 6. Track your progress in the progress bar
 
 ## Testing
 
-### Node.js Tests (Recommended)
-Run from terminal:
+Run the test suite with Vitest:
+
 ```bash
-node math-game-tests.js
+npm test           # runs tests once
+npm run test:watch # optional: watch mode
 ```
 
-This runs a comprehensive test suite covering:
-- Addition problem generation (limits 10 and 20)
-- Subtraction problem generation (limits 10 and 20)
-- Random field selection distribution
-- Answer evaluation logic
-- Timer behavior (crash regression tests)
-- Touchpad interaction
-- And more...
+**27 tests** across 3 files:
 
-### Browser Tests
-Open `tests.html` in your browser to run automated tests:
-- Addition problem generation (limits 10 and 20)
-- Subtraction problem generation (limits 10 and 20)
-- Random field selection distribution
+| File | Tests | Covers |
+|---|---|---|
+| `test/mathEngine.test.js` | 10 | Pure problem generation (+, −, limits 10 & 20), random field distribution, `evaluateAnswer` logic |
+| `test/useMathGame.test.js` | 14 | Composable state, timer crash regression, auto-advance, progress counts, celebration trigger |
+| `test/App.test.js` | 3 | Mounted `App.vue` rendering, touchpad size changes, first-empty-field fill |
 
-Tests run automatically on page load in the browser console.
+## Deploying to GitHub Pages
+
+The repository includes a GitHub Actions workflow that builds and deploys
+automatically. Every push to `main` runs the tests, builds with Vite, and
+publishes `dist/` to GitHub Pages.
+
+### One-time setup
+
+1. In GitHub repo → **Settings → Pages**, set **Source** to **"GitHub Actions"**
+2. Push/merge your changes to `main`
+3. The site appears at `https://<username>.github.io/<repository>/`
+
+To make builds work from that subpath, `vite.config.js` sets `base: './'`,
+so all asset URLs in `dist/index.html` are relative.
 
 ## Project Structure
 
 ```
-ai-AdditionWebpage/
-├── index.html       # Main application
-├── tests.html       # Browser-based test suite
-├── math-game.js     # Shared logic module
-├── math-game-tests.js # Node.js unit tests (comprehensive)
-├── AGENTS.md        # Development guidelines
-└── css/            # CSS organization (empty)
+simpleKindergartenAdditionWebpage/
+├── index.html              # Vite entrypoint (mounts #app)
+├── vite.config.js          # Vite/Vitest config (base './', vue plugin)
+├── package.json            # Scripts & dependencies (vue, vite, vitest)
+├── .github/workflows/      # GitHub Actions (Pages deploy)
+├── src/
+│   ├── main.js             # App bootstrap
+│   ├── App.vue             # Single-file UI component
+│   ├── useMathGame.js      # Reactive game state composable (no DOM)
+│   ├── mathEngine.js       # Pure, framework-free math logic (testable)
+│   └── style.css           # Global styles + responsive + celebration CSS
+├── test/
+│   ├── mathEngine.test.js  # Pure logic unit tests
+│   ├── useMathGame.test.js # Composable/logic tests (fake timers)
+│   └── App.test.js         # Mounted component tests (@vue/test-utils)
+├── AGENTS.md               # Development guidelines
+├── README.md               # This file
+├── test-plan.md            # Testing plan
+├── test-gaps-analysis.md   # Test coverage analysis
+└── testing-summary.md      # Testing summary/results
 ```
 
-## Development
+## Architecture
 
-The project uses a single-source logic architecture:
-- `math-game.js` contains all game logic (problem generation, validation, etc.)
-- `index.html` contains the UI and event handling
-- `tests.html` uses the same `math-game.js` for testing
-- `math-game-tests.js` provides comprehensive Node.js unit tests
+The project uses a layered architecture that keeps logic testable:
 
-This ensures the game logic is consistent across the app and tests.
+- **`mathEngine.js`** — pure ES-module functions (generate, evaluate).
+  No DOM, no framework; unit-testable in isolation.
+- **`useMathGame.js`** — Vue composable holding all reactive game state and
+  timer-driven auto-advance. Performs *no* direct DOM manipulation, so the
+  logic (including the timer crash-regression) is unit-testable without a browser.
+- **`App.vue`** — thin rendering layer; binds state from the composable to
+  the template and forwards user actions back into it.
 
-## Bug Fixes
+This separation means the game logic is fully covered by Node-side Vitest
+tests, while mount-level tests verify the UI wiring.
 
-### Mobile Crash Fix (v2.0)
-Fixed a critical infinite loop bug in `generateNewProblem()` that could cause the page to freeze/crash on mobile. The issue occurred when randomly generating addition problems with the max limit - when `num1` happened to equal the limit, the loop would never terminate. Fixed by reusing the `generateAddition()` helper function which properly handles all edge cases.
+## Bug Fix History
 
-### Answer Logic
-- Correctly evaluates answers regardless of which field is empty (num1, num2, or answer)
-- Properly validates subtraction problems (ensures num1 >= num2 for positive results)
-- Correctly handles zero as a valid answer
-- Empty fields are properly detected and do not count as attempts
+- **Mobile crash regression** — generation guard (`isGenerating`) + centralized
+  `clearTimer()` prevent infinite loops / timer accumulation that crashed mobile browsers.
+- **Answer logic** — correct answer evaluation regardless of which field is
+  left blank; zero is valid; blank/incomplete input returns "Please fill in all fields!".
+- **Progress tracking** — attempts (`totalProblems`) vs solved counted correctly.
 
 ## License
 
