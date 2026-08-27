@@ -4,11 +4,11 @@ const MathGame = (function() {
     let currentNum1 = 0;
     let currentNum2 = 0;
     let currentOperator = '+';
-    let correctAnswer = 0;
     let problemsSolved = 0;
     let totalProblems = 0;
     let touchpadTimer = null;
     let maxLimit = 10;
+    let isGenerating = false;
 
     // DOM elements (will be set by init)
     let num1Input;
@@ -21,6 +21,8 @@ const MathGame = (function() {
     let problemsSolvedSpan;
     let totalProblemsSpan;
     let progressFill;
+    let addBtn;
+    let subtractBtn;
 
     function generateNumbers(maxLimit) {
         const num1 = Math.floor(Math.random() * maxLimit) + 1;
@@ -82,8 +84,9 @@ const MathGame = (function() {
     }
 
     function initTouchpad() {
-        touchpad.innerHTML = '';
-        console.log('initTouchpad called with maxLimit:', maxLimit);
+        while (touchpad.firstChild) {
+            touchpad.removeChild(touchpad.firstChild);
+        }
         for (let i = 1; i <= maxLimit; i++) {
             const btn = document.createElement('button');
             btn.className = 'touchpad-btn';
@@ -93,13 +96,10 @@ const MathGame = (function() {
                 const num = parseInt(this.getAttribute('data-num'));
                 if (num1Input.value === '') {
                     num1Input.value = num;
-                    num1Input.focus();
                 } else if (num2Input.value === '') {
                     num2Input.value = num;
-                    num2Input.focus();
                 } else {
                     answerInput.value = num;
-                    answerInput.focus();
                 }
                 checkAnswer();
             };
@@ -112,6 +112,12 @@ const MathGame = (function() {
         if (operatorSpan) {
             operatorSpan.textContent = operator === '+' ? '+' : '−';
         }
+        if (addBtn) {
+            addBtn.classList.toggle('active', operator === '+');
+        }
+        if (subtractBtn) {
+            subtractBtn.classList.toggle('active', operator === '-');
+        }
         generateNewProblem();
     }
 
@@ -122,6 +128,13 @@ const MathGame = (function() {
     }
 
     function generateNewProblem() {
+        if (isGenerating) return;
+        isGenerating = true;
+        
+        if (touchpadTimer) {
+            clearTimeout(touchpadTimer);
+            touchpadTimer = null;
+        }
         feedbackDiv.textContent = '';
         currentNum1 = Math.floor(Math.random() * maxLimit) + 1;
         currentNum2 = Math.floor(Math.random() * maxLimit) + 1;
@@ -136,57 +149,76 @@ const MathGame = (function() {
             [currentNum1, currentNum2] = [currentNum2, currentNum1];
         }
         
-        if (currentOperator === '+') {
-            correctAnswer = currentNum1 + currentNum2;
-        } else {
-            correctAnswer = currentNum1 - currentNum2;
-        }
-        
         const emptyField = Math.floor(Math.random() * 3);
         
         if (emptyField === 0) {
             num1Input.value = '';
             num2Input.value = currentNum2;
-            answerInput.value = correctAnswer;
-            num1Input.focus();
+            answerInput.value = currentOperator === '+' ? currentNum1 + currentNum2 : currentNum1 - currentNum2;
         } else if (emptyField === 1) {
             num1Input.value = currentNum1;
             num2Input.value = '';
-            answerInput.value = correctAnswer;
-            num2Input.focus();
+            answerInput.value = currentOperator === '+' ? currentNum1 + currentNum2 : currentNum1 - currentNum2;
         } else {
             num1Input.value = currentNum1;
             num2Input.value = currentNum2;
             answerInput.value = '';
-            answerInput.focus();
         }
         
         clearTimer();
-        totalProblems++;
         updateProgress();
+        isGenerating = false;
     }
 
     function checkAnswer() {
-        const userAnswer = parseInt(answerInput.value);
+        clearTimer();
+        const val1 = parseInt(num1Input.value);
+        const val2 = parseInt(num2Input.value);
+        const answerVal = parseInt(answerInput.value);
         
-        if (isNaN(userAnswer) || answerInput.value === '') {
-            feedbackDiv.textContent = 'Please enter a number!';
+        if (isNaN(val1) || isNaN(val2) || isNaN(answerVal)) {
+            feedbackDiv.textContent = 'Please fill in all fields!';
             feedbackDiv.style.color = '#ff6b6b';
-            clearTimer();
             return;
         }
         
-        if (userAnswer === correctAnswer) {
+        let isCorrect = false;
+        if (currentOperator === '+') {
+            if (num1Input.value === '') {
+                isCorrect = (val2 + val1 === answerVal);
+            } else if (num2Input.value === '') {
+                isCorrect = (val1 + val2 === answerVal);
+            } else {
+                isCorrect = (val1 + val2 === answerVal);
+            }
+        } else {
+            if (num1Input.value === '') {
+                isCorrect = (val2 + answerVal === val1);
+            } else if (num2Input.value === '') {
+                isCorrect = (val1 - answerVal === val2);
+            } else {
+                isCorrect = (val1 - val2 === answerVal);
+            }
+        }
+        
+        if (isCorrect) {
             feedbackDiv.textContent = 'Correct! 🎉';
             feedbackDiv.style.color = '#4ecdc4';
             problemsSolved++;
+            totalProblems++;
             updateProgress();
             playSound('correct');
             startTimer();
         } else {
             feedbackDiv.textContent = 'Incorrect 😊';
             feedbackDiv.style.color = '#ff6b6b';
+            totalProblems++;
+            updateProgress();
+            clearTimer();
             playSound('incorrect');
+            touchpadTimer = setTimeout(function() {
+                generateNewProblem();
+            }, 1500);
         }
     }
 
@@ -201,8 +233,11 @@ const MathGame = (function() {
     }
 
     function startTimer() {
+        if (isGenerating) return;
         clearTimer();
+        if (touchpadTimer) return;
         touchpadTimer = setTimeout(function() {
+            touchpadTimer = null;
             generateNewProblem();
         }, 2000);
     }
@@ -233,6 +268,8 @@ const MathGame = (function() {
         totalProblemsSpan = domElements.totalProblemsSpan;
         progressFill = domElements.progressFill;
         operatorSpan = domElements.operatorSpan;
+        addBtn = domElements.addBtn;
+        subtractBtn = domElements.subtractBtn;
 
         initTouchpad();
         
