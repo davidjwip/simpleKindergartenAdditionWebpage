@@ -358,6 +358,90 @@
             }
         }
         
+        /* Celebration overlay */
+        .celebration-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .celebration-overlay.visible {
+            display: flex;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .celebration-content {
+            text-align: center;
+            animation: bounce 1s infinite alternate;
+        }
+        
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-20px); }
+        }
+        
+        .celebration-image {
+            width: 300px;
+            height: 300px;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .celebration-title {
+            font-size: 3rem;
+            color: #ffd1dc;
+            text-shadow: 3px 3px 0 #ff6b6b;
+            margin: 20px 0;
+            animation: pulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .celebration-close-btn {
+            margin-top: 30px;
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            border: none;
+            border-radius: 50px;
+            background-color: #4ecdc4;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            font-family: 'Fredoka', 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', sans-serif;
+        }
+        
+        .celebration-close-btn:hover {
+            background-color: #3aa897;
+            transform: scale(1.1);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        .celebration-close-btn:active {
+            transform: scale(0.95);
+        }
+        
         body {
             padding: 10px;
         }
@@ -426,6 +510,16 @@
             <p>© 2026 David Ip. Created for George and Teddy Ip.</p>
         </footer>
     </div>
+    
+    <!-- Celebration Overlay -->
+    <div id="celebration-overlay" class="celebration-overlay">
+        <div class="celebration-content">
+            <div class="celebration-title">🌟 Amazing Job! 🌟</div>
+            <p style="font-size: 1.5rem; margin: 10px 0;">You solved 10 problems correctly!</p>
+            <div style="font-size: 4rem; margin: 20px;">🎉🎈🚀</div>
+            <button id="celebration-close-btn" class="celebration-close-btn">Keep Playing!</button>
+        </div>
+    </div>
 
     <script src="math-game.js"></script>
     <script>
@@ -492,6 +586,40 @@
         closeInstructionsBtn.addEventListener('click', function() {
             instructionsPanel.style.display = 'none';
             instructionsBtn.style.display = 'inline-block';
+        });
+        
+        // Celebration overlay functionality
+        const celebrationOverlay = document.getElementById('celebration-overlay');
+        const celebrationCloseBtn = document.getElementById('celebration-close-btn');
+        
+        // Track if celebration is showing to avoid infinite loops
+        let celebrationShown = false;
+
+        // Register a progress callback that fires whenever the solved count
+        // updates (unlike the old monkey-patched MathGame.updateProgress, this
+        // is reached because checkAnswer/generateNewProblem both call it).
+        MathGame.setProgressCallback(function(solved) {
+            if (solved >= 10 && !celebrationShown) {
+                celebrationShown = true;
+                celebrationOverlay.classList.add('visible');
+            }
+        });
+        
+        // Close celebration button
+        celebrationCloseBtn.addEventListener('click', function() {
+            celebrationOverlay.classList.remove('visible');
+            // Reset the score after a short delay. resetProgress() clears BOTH the
+            // solved count and the total-attempt count so the new round starts at 0
+            // (previously only the solved count was cleared, leaving totalProblems
+            // stuck at 10+).
+            setTimeout(function() {
+                MathGame.resetProgress();
+                problemsSolvedSpan.textContent = '0';
+                totalProblemsSpan.textContent = '0';
+                progressFill.style.width = '0%';
+                celebrationShown = false;
+                MathGame.generateNewProblem();
+            }, 500);
         });
     </script>
 </body>

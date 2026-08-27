@@ -516,6 +516,115 @@ test('setMaxLimit updates limit and rebuilds touchpad', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Celebration threshold (regression: overlay never fired because the old
+// monkey-patched MathGame.updateProgress was never called internally)
+// ---------------------------------------------------------------------------
+
+console.log('\n=== Celebration Threshold ===\n');
+
+test('progress callback reports solved count reaching 10', () => {
+    const dom = setupGame();
+    MathGame.resetSolvedCount();
+    const seen = [];
+    MathGame.setProgressCallback((solved) => seen.push(solved));
+    for (let i = 0; i < 10; i++) {
+        dom.num1Input.value = '2';
+        dom.num2Input.value = '3';
+        dom.answerInput.value = '5';
+        MathGame.checkAnswer();
+        fakeTimers.flush();
+    }
+    assertEqual(MathGame.getProblemsSolved(), 10);
+    assertTrue(seen.includes(10), `Expected callback to receive 10, got ${JSON.stringify(seen)}`);
+});
+
+test('celebration shows exactly once at 10 and re-arms after reset', () => {
+    const dom = setupGame();
+    MathGame.resetProgress();
+    let celebrationShown = false;
+    let shownCount = 0;
+    MathGame.setProgressCallback((solved) => {
+        if (solved >= 10 && !celebrationShown) {
+            celebrationShown = true;
+            shownCount++;
+        }
+    });
+    // Solve 25 problems; "close" (reset) on the 10th and 20th solves.
+    for (let i = 0; i < 25; i++) {
+        dom.num1Input.value = '2';
+        dom.num2Input.value = '3';
+        dom.answerInput.value = '5';
+        MathGame.checkAnswer();
+        fakeTimers.flush();
+        if (MathGame.getProblemsSolved() >= 10 && celebrationShown) {
+            MathGame.resetProgress();
+            celebrationShown = false;
+        }
+    }
+    assertEqual(shownCount, 2, 'Should have celebrated twice (at 10 and 20)');
+});
+
+// ---------------------------------------------------------------------------
+// Total-attempt tracking / reset (regression: totalProblems was never cleared
+// when a new round started, so it showed the stale value, e.g. 10, instead of 0)
+// ---------------------------------------------------------------------------
+
+console.log('\n=== Total Attempts & Reset ===\n');
+
+test('after resetProgress both counts are zero', () => {
+    const dom = setupGame();
+    MathGame.resetProgress(); // clear any state carried over from earlier tests
+    // Fake some prior activity so the counters are non-zero.
+    dom.num1Input.value = '2';
+    dom.num2Input.value = '3';
+    dom.answerInput.value = '5';
+    MathGame.checkAnswer();
+    dom.answerInput.value = '9';
+    MathGame.checkAnswer();
+    assertEqual(MathGame.getTotalProblems(), 2);
+    assertEqual(MathGame.getProblemsSolved(), 1);
+
+    MathGame.resetProgress();
+    assertEqual(MathGame.getProblemsSolved(), 0, 'Problems solved should reset to 0');
+    assertEqual(MathGame.getTotalProblems(), 0, 'Total attempts should reset to 0');
+});
+
+test('total counts both correct and incorrect attempts from zero', () => {
+    const dom = setupGame();
+    MathGame.resetProgress();
+    assertEqual(MathGame.getTotalProblems(), 0, 'Total should start at 0');
+
+    for (let i = 0; i < 5; i++) {
+        MathGame.generateNewProblem();
+        dom.num1Input.value = '2';
+        dom.num2Input.value = '3';
+        dom.answerInput.value = '5';
+        MathGame.checkAnswer();   // correct
+        fakeTimers.flush();
+    }
+    for (let i = 0; i < 5; i++) {
+        MathGame.generateNewProblem();
+        dom.num1Input.value = '2';
+        dom.num2Input.value = '3';
+        dom.answerInput.value = '9';
+        MathGame.checkAnswer();   // incorrect
+        fakeTimers.flush();
+    }
+    // 5 correct + 5 incorrect = 10 attempts, only 5 solved.
+    assertEqual(MathGame.getProblemsSolved(), 5);
+    assertEqual(MathGame.getTotalProblems(), 10);
+});
+
+test('generating a new problem does not alter the attempt counter', () => {
+    const dom = setupGame();
+    MathGame.resetProgress();
+    MathGame.generateNewProblem();
+    MathGame.generateNewProblem();
+    assertEqual(MathGame.getTotalProblems(), 0, 'generateNewProblem must not count attempts');
+    assertEqual(MathGame.getProblemsSolved(), 0);
+});
+
+// ---------------------------------------------------------------------------
 
 console.log('\n' + '='.repeat(50));
 console.log(`\nResults: ${passed} passed, ${failed} failed\n`);

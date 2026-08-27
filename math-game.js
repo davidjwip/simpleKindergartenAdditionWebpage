@@ -9,6 +9,7 @@ const MathGame = (function() {
     let touchpadTimer = null;
     let maxLimit = 10;
     let isGenerating = false;
+    let progressCallback = null;
 
     // DOM elements (will be set by init)
     let num1Input;
@@ -218,6 +219,10 @@ const MathGame = (function() {
             const progressPercentage = (problemsSolved / totalProblems) * 100;
             progressFill.style.width = `${progressPercentage}%`;
         }
+
+        if (progressCallback) {
+            progressCallback(problemsSolved, totalProblems);
+        }
     }
 
     function startTimer() {
@@ -280,7 +285,17 @@ const MathGame = (function() {
         testRandomField,
         getMaxLimit: () => maxLimit,
         getProblemsSolved: () => problemsSolved,
-        getTotalProblems: () => totalProblems
+        getTotalProblems: () => totalProblems,
+        setProgressCallback: (cb) => {
+            progressCallback = cb;
+        },
+        resetSolvedCount: () => {
+            problemsSolved = 0;
+        },
+        resetProgress: () => {
+            problemsSolved = 0;
+            totalProblems = 0;
+        }
     };
 })();
 

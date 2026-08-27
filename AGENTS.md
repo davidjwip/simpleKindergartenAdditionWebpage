@@ -4,7 +4,7 @@
 - `index.html` - Main entrypoint for the math practice web application
 - `math-game.js` - Core game logic module (shared between app and tests)
 - `tests.html` - Automated test suite for the math game logic (runs in browser)
-- `math-game-tests.js` - Comprehensive Node.js unit tests (33 tests)
+- `math-game-tests.js` - Comprehensive Node.js unit tests (38 tests)
 - `css/` - Empty directory for optional CSS organization
 
 ## Development Commands
