@@ -89,7 +89,7 @@ const MathGame = (function() {
             btn.className = 'touchpad-btn';
             btn.setAttribute('data-num', i);
             btn.textContent = i;
-            btn.addEventListener('click', function() {
+            btn.onclick = function() {
                 const num = parseInt(this.getAttribute('data-num'));
                 if (num1Input.value === '') {
                     num1Input.value = num;
@@ -102,7 +102,7 @@ const MathGame = (function() {
                     answerInput.focus();
                 }
                 checkAnswer();
-            });
+            };
             touchpad.appendChild(btn);
         }
     }
