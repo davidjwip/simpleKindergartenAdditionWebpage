@@ -24,6 +24,21 @@ A fun, interactive web application for children to practice addition and subtrac
 
 ## Testing
 
+### Node.js Tests (Recommended)
+Run from terminal:
+```bash
+node math-game-tests.js
+```
+
+This runs a comprehensive test suite covering:
+- Addition problem generation (limits 10 and 20)
+- Subtraction problem generation (limits 10 and 20)
+- Random field selection distribution
+- Answer evaluation logic
+- Timer behavior (crash regression tests)
+- Touchpad interaction
+- And more...
+
 ### Browser Tests
 Open `tests.html` in your browser to run automated tests:
 - Addition problem generation (limits 10 and 20)
@@ -32,23 +47,16 @@ Open `tests.html` in your browser to run automated tests:
 
 Tests run automatically on page load in the browser console.
 
-### Node.js Tests
-Run from terminal:
-```bash
-node math-game-tests.js
-```
-
-This runs the same tests using a Node.js test framework and reports pass/fail results.
-
 ## Project Structure
 
 ```
 ai-AdditionWebpage/
-├── index.html      # Main application
-├── tests.html      # Test suite
-├── math-game.js    # Shared logic module
-├── AGENTS.md       # Development guidelines
-└── css/           # CSS organization (empty)
+├── index.html       # Main application
+├── tests.html       # Browser-based test suite
+├── math-game.js     # Shared logic module
+├── math-game-tests.js # Node.js unit tests (comprehensive)
+├── AGENTS.md        # Development guidelines
+└── css/            # CSS organization (empty)
 ```
 
 ## Development
@@ -57,9 +65,24 @@ The project uses a single-source logic architecture:
 - `math-game.js` contains all game logic (problem generation, validation, etc.)
 - `index.html` contains the UI and event handling
 - `tests.html` uses the same `math-game.js` for testing
+- `math-game-tests.js` provides comprehensive Node.js unit tests
 
 This ensures the game logic is consistent across the app and tests.
 
+## Bug Fixes
+
+### Mobile Crash Fix (v2.0)
+Fixed a critical infinite loop bug in `generateNewProblem()` that could cause the page to freeze/crash on mobile. The issue occurred when randomly generating addition problems with the max limit - when `num1` happened to equal the limit, the loop would never terminate. Fixed by reusing the `generateAddition()` helper function which properly handles all edge cases.
+
+### Answer Logic
+- Correctly evaluates answers regardless of which field is empty (num1, num2, or answer)
+- Properly validates subtraction problems (ensures num1 >= num2 for positive results)
+- Correctly handles zero as a valid answer
+- Empty fields are properly detected and do not count as attempts
+
 ## License
 
-MIT License - Feel free to use and modify for educational purposes!
+© 2026 David Ip. Created for George and Teddy Ip.
+All rights reserved.
+
+For educational use only.

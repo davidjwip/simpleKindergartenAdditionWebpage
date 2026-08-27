@@ -136,19 +136,13 @@ const MathGame = (function() {
             touchpadTimer = null;
         }
         feedbackDiv.textContent = '';
-        currentNum1 = Math.floor(Math.random() * maxLimit) + 1;
-        currentNum2 = Math.floor(Math.random() * maxLimit) + 1;
-        
-        if (currentOperator === '+') {
-            while (currentNum1 + currentNum2 > maxLimit) {
-                currentNum2 = Math.floor(Math.random() * maxLimit) + 1;
-            }
-        }
-        
-        if (currentOperator === '-' && currentNum1 < currentNum2) {
-            [currentNum1, currentNum2] = [currentNum2, currentNum1];
-        }
-        
+
+        const problem = currentOperator === '+'
+            ? generateAddition(maxLimit)
+            : generateSubtraction(maxLimit);
+        currentNum1 = problem.num1;
+        currentNum2 = problem.num2;
+
         const emptyField = Math.floor(Math.random() * 3);
         
         if (emptyField === 0) {
@@ -170,35 +164,29 @@ const MathGame = (function() {
         isGenerating = false;
     }
 
+    // Pure helper: returns true/false/null (null = incomplete/invalid input)
+    function evaluateAnswer(val1, val2, answerVal, operator) {
+        if (isNaN(val1) || isNaN(val2) || isNaN(answerVal)) {
+            return null;
+        }
+        if (operator === '+') {
+            return val1 + val2 === answerVal;
+        }
+        return val1 - val2 === answerVal;
+    }
+
     function checkAnswer() {
         clearTimer();
         const val1 = parseInt(num1Input.value);
         const val2 = parseInt(num2Input.value);
         const answerVal = parseInt(answerInput.value);
-        
-        if (isNaN(val1) || isNaN(val2) || isNaN(answerVal)) {
+
+        const isCorrect = evaluateAnswer(val1, val2, answerVal, currentOperator);
+
+        if (isCorrect === null) {
             feedbackDiv.textContent = 'Please fill in all fields!';
             feedbackDiv.style.color = '#ff6b6b';
             return;
-        }
-        
-        let isCorrect = false;
-        if (currentOperator === '+') {
-            if (num1Input.value === '') {
-                isCorrect = (val2 + val1 === answerVal);
-            } else if (num2Input.value === '') {
-                isCorrect = (val1 + val2 === answerVal);
-            } else {
-                isCorrect = (val1 + val2 === answerVal);
-            }
-        } else {
-            if (num1Input.value === '') {
-                isCorrect = (val2 + answerVal === val1);
-            } else if (num2Input.value === '') {
-                isCorrect = (val1 - answerVal === val2);
-            } else {
-                isCorrect = (val1 - val2 === answerVal);
-            }
         }
         
         if (isCorrect) {
@@ -250,11 +238,7 @@ const MathGame = (function() {
     }
 
     function playSound(type) {
-        if (type === 'correct') {
-            console.log('Beep - Correct answer!');
-        } else {
-            console.log('Beep - Incorrect answer!');
-        }
+        // Placeholder for future sound support
     }
 
     function init(domElements) {
@@ -276,9 +260,7 @@ const MathGame = (function() {
         limitToggle.checked = maxLimit === 20;
         
         limitToggle.addEventListener('change', function() {
-            console.log('Checkbox changed, checked:', this.checked);
             maxLimit = this.checked ? 20 : 10;
-            console.log('maxLimit set to:', maxLimit);
             initTouchpad();
             generateNewProblem();
         });
@@ -292,6 +274,7 @@ const MathGame = (function() {
         checkAnswer,
         generateAddition,
         generateSubtraction,
+        evaluateAnswer,
         testAddition,
         testSubtraction,
         testRandomField,
