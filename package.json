@@ -1,0 +1,23 @@
+{
+  "name": "math-game-vue",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Fun math practice for kindergarten kids (Vue 3 migration)",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "vue": "^3.4.21"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "@vue/test-utils": "^2.4.5",
+    "happy-dom": "^14.7.1",
+    "vite": "^5.2.0",
+    "vitest": "^1.6.0"
+  }
+}
