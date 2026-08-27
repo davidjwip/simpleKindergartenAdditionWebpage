@@ -1,85 +1,99 @@
 # AGENTS.md
 
 ## Project Structure
-- `index.html` - Main entrypoint for the math practice web application
-- `math-game.js` - Core game logic module (shared between app and tests)
-- `tests.html` - Automated test suite for the math game logic (runs in browser)
-- `math-game-tests.js` - Comprehensive Node.js unit tests (38 tests)
-- `css/` - Empty directory for optional CSS organization
+- `index.html` - Vite entrypoint (mounts `#app`); loads `src/main.js` via relative path
+- `vite.config.js` - Vite + Vitest configuration (`base: './'` for GitHub Pages subpath hosting)
+- `package.json` - Scripts and dependencies (Vue 3.4, Vite 5, Vitest, @vue/test-utils, happy-dom)
+- `src/main.js` - App bootstrap (`createApp(App).mount('#app')`)
+- `src/App.vue` - Single-file UI component (rendering only; no logic)
+- `src/useMathGame.js` - Vue composable: all reactive game state, timer logic (no direct DOM)
+- `src/mathEngine.js` - Pure, framework-free math logic (generation + evaluation)
+- `src/style.css` - Global styles, responsive breakpoints, celebration overlay
+- `test/mathEngine.test.js` - Unit tests for pure logic (10 tests)
+- `test/useMathGame.test.js` - Composable/logic tests with Vitest fake timers (14 tests)
+- `test/App.test.js` - Mounted component tests via @vue/test-utils (3 tests)
+- `.github/workflows/deploy.yml` - GitHub Actions: test + build + publish `dist/` to Pages
+- `README.md`, `test-plan.md`, `test-gaps-analysis.md`, `testing-summary.md` - Documentation
 
 ## Development Commands
-- Open `index.html` in a browser to run the application
-- Open `tests.html` in a browser to run automated tests
-- Run `node math-game-tests.js` to run Node.js unit tests
+```bash
+npm install        # install dependencies (first time)
+npm run dev        # start Vite dev server (http://localhost:5173)
+npm run build      # production build → dist/
+npm run preview    # serve the production build locally
+npm test           # run Vitest test suite once
+```
 
 ## Test Commands
-- **Browser tests**: Open `tests.html` in a browser (runs automatically on load)
-- **Node.js tests**: Run `node math-game-tests.js` from terminal
+- **Vitest suite**: `npm test` (27 tests, 3 files)
+  - `test/mathEngine.test.js` (10) - pure logic
+  - `test/useMathGame.test.js` (14) - composable + timer regression (fake timers)
+  - `test/App.test.js` (3) - mounted component
+- Vitest runs in the `happy-dom` environment (configured in `vite.config.js`).
+
+## Important Constraints
+- **Do NOT open `index.html` directly via `file://`** — browser CORS blocks ES
+  modules. Always serve via `npm run dev` / `npm run preview` / a web server.
+- **Keep `vite.config.js` `base: './'`** — relative assets are required for the
+  GitHub Pages subpath deployment.
+- **Keep `index.html` script src relative** (`./src/main.js`) so Vite resolves it.
 
 ## Logic Reference
 The application supports:
 - Addition and subtraction problems
-- Number limits of 10 or 20 (toggleable via checkbox)
-- Random problem generation with one missing value
-- Progress tracking and visual feedback
+- Number limits of 10 or 20 (toggleable via "Limit to 20" checkbox)
+- Random problem generation with exactly one missing value (field chosen randomly)
+- Progress tracking (solved vs total attempts) and visual feedback
 - Auto-advance to next problem after 2 seconds on correct answer
+- 1.5 second regeneration after an incorrect answer
+- Celebration overlay + score reset every 10 solved problems
 
 ## File Descriptions
-### index.html
-Main application with HTML/CSS/JS bundled. Features:
-- Problem display with input fields for A, B, and C (one hidden)
-- Touchpad for number selection (1 to current limit)
-- Operator toggle (+/−) with visual feedback (active state)
-- Limit toggle (10/20)
-- Progress bar and statistics
-- Touchpad buttons populate the currently empty field
+### src/mathEngine.js
+Pure ES-module functions — NO DOM, NO Vue imports:
+- `generateNumbers(maxLimit)` - random `{ num1, num2 }` in `[1, maxLimit]`
+- `generateAddition(maxLimit)` - valid addition with `num1 + num2 <= maxLimit`
+- `generateSubtraction(maxLimit)` - valid subtraction with `num1 >= num2`
+- `pickRandomField()` - returns `0` (num1), `1` (num2), or `2` (answer)
+- `evaluateAnswer(val1, val2, answerVal, operator)` - returns `true` / `false`, or `null` for invalid input
+- Test helpers: `testAddition`, `testSubtraction`, `testRandomField`
+
+### src/useMathGame.js
+Vue composable holding all reactive state. No direct DOM manipulation.
+Exposes refs: `num1`, `num2`, `answer`, `operator`, `feedback`, `feedbackColor`,
+`problemsSolved`, `totalProblems`, `progressPercent`, `isAdd`, `maxLimit`.
+Exposes actions: `generateNewProblem`, `checkAnswer`, `fillValue`, `setOperator`,
+`setMaxLimit`, `resetProgress`, `setProgressCallback`.
+Internal guards: `touchpadTimer` + `isGenerating` prevent multi-timer accumulation
+(the mobile crash regression fix) and use `clearTimeout` before regenerating.
+
+### src/App.vue
+Single-file component. Binds composable state to template, renders:
+- Header with "How to Use" collapsible instructions panel
+- Equation with three readonly inputs (one blank)
+- Touchpad grid (1..maxLimit), rebuilds on limit change
+- Operator toggle buttons (visual active state)
+- Progress bar + solved/total stats
+- Celebration overlay (once per 10 solved, then resets score)
 - No mobile keyboard triggered (inputs are readonly)
 
-### math-game.js
-Shared logic module containing:
-- **Core Functions**
-  - `MathGame.init(domElements)` - Initialize with DOM references
-  - `MathGame.setOperator(operator, operatorSpan)` - Switch between +/−
-  - `MathGame.generateNewProblem()` - Generate random problem
-  - `MathGame.checkAnswer()` - Validate user's answer
-- **Pure Helpers (testable)**
-  - `MathGame.evaluateAnswer(val1, val2, answerVal, operator)` - Check answer correctness without DOM
-- **Generators**
-  - `MathGame.generateAddition(limit)` - Generate valid addition problem
-  - `MathGame.generateSubtraction(limit)` - Generate valid subtraction problem
-  - `MathGame.getMaxLimit()` - Get current limit (10 or 20)
-  - `MathGame.getProblemsSolved()` - Get solved count
-  - `MathGame.getTotalProblems()` - Get total attempts count
-- **Test Helpers**
-  - `MathGame.testAddition(limit, iterations)` - Test addition logic
-  - `MathGame.testSubtraction(limit, iterations)` - Test subtraction logic
-  - `MathGame.testRandomField(iterations)` - Test field randomization
-
-### tests.html
-Browser-based test suite verifying:
-- Addition problem generation (limit 10 and 20)
-- Subtraction problem generation (limit 10 and 20)
-- Random field selection distribution
-
-Tests run automatically on page load. Open browser console to see results.
-
-### math-game-tests.js
-Comprehensive Node.js unit tests (33 tests) using simple test framework. Tests:
-- Addition problem generation (limits 10 and 20)
-- Subtraction problem generation (limits 10 and 20)
-- Random field selection distribution
-- **Pure `evaluateAnswer` logic** - Addition/subtraction correctness, zero as valid answer, missing operands
-- **Timer behavior (crash regression)** - Exactly one timer queued, auto-advance produces valid problem, re-entrancy guard
-- **Generated problem consistency** - All generated problems are solvable
-- **Touchpad interaction** - Renders correct button count, fills first empty field
-- **setMaxLimit** - Updates limit and rebuilds touchpad
+### test/useMathGame.test.js
+Timer regression tests ported from the original Node suite. Uses
+`vi.useFakeTimers()` to verify:
+- Exactly one timer queued after a correct answer
+- No timer accumulation on rapid interactions
+- Auto-advance produces a solvable new problem with exactly one blank
+- Incorrect answer schedules a regeneration after 1500ms
+- Pending correct-answer timer is cleared when answering again
+- Progress counters and celebration (10-solved) behavior
 
 ## Current State
-- Active development: Bug fixes and feature improvements
-- Tests: 33 Node.js tests + browser tests
-- Default: Limit 10 with checkbox unchecked, limit 20 when checkbox checked
+- Architecture: Vue 3 + Vite 5 (migrated from vanilla JS in `feature/vue-migration`)
+- Tests: 27 Vitest tests, 3 files — all passing
+- Deployment: GitHub Actions workflow; `base: './'` for GitHub Pages
+- Default: Limit 10 (checkbox unchecked), limit 20 when checked
 - **Recent fixes**:
-  - Fixed critical mobile crash (infinite loop in problem generation)
-  - Fixed answer evaluation logic for all field positions
-  - Timer no longer accumulates on rapid interactions
-  - Progress tracking correctly counts attempts vs solved
+  - `base: './'` + relative `./src/main.js` so builds deploy to GitHub Pages subpath
+  - Mobile crash regression addressed in composable (generation guard + timer dedup)
+  - Answer evaluation logic handles all field positions, zero as valid answer
+  - Progress tracking counts attempts (`totalProblems`) vs solved (`problemsSolved`)

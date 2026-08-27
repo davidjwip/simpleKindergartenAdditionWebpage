@@ -3,6 +3,9 @@ import vue from '@vitejs/plugin-vue';
 
 export default defineConfig({
     plugins: [vue()],
+    // Relative base so the built site works from any subpath,
+    // e.g. GitHub Pages at https://<user>.github.io/<repo>/
+    base: './',
     test: {
         environment: 'happy-dom'
     }
