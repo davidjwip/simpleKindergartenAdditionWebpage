@@ -38,4 +38,15 @@ describe('App.vue', () => {
         expect(inputsAfter[emptyIndex].element.value).toBe(String(pickedButton));
         wrapper.unmount();
     });
+
+    it('shows a "?" placeholder on every input so any blank box is indicated', () => {
+        const wrapper = mount(App);
+        const inputs = wrapper.findAll('.problem input');
+        // All three fields (num1, num2, answer) carry the placeholder,
+        // so the missing value is visually flagged regardless of position.
+        inputs.forEach((input) => {
+            expect(input.attributes('placeholder')).toBe('?');
+        });
+        wrapper.unmount();
+    });
 });

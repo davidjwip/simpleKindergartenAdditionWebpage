@@ -85,9 +85,9 @@ function closeCelebration() {
 
             <div class="problem-area">
                 <div class="problem">
-                    <input type="text" :value="num1" readonly />
+                    <input type="text" :value="num1" readonly placeholder="?" />
                     <span class="operator">{{ opSymbol }}</span>
-                    <input type="text" :value="num2" readonly />
+                    <input type="text" :value="num2" readonly placeholder="?" />
                     <span class="equal-sign">=</span>
                     <input type="text" :value="answer" readonly placeholder="?" />
                 </div>
