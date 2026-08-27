@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Game Tests</title>
+</head>
+<body>
+    <h1>Open browser console to see test results</h1>
+    <script src="math-game.js"></script>
+    <script>
+        let passed = 0;
+        let failed = 0;
+
+        function test(description, fn) {
+            try {
+                fn();
+                console.log('✓ ' + description);
+                passed++;
+            } catch (error) {
+                console.log('✗ ' + description);
+                console.log('  ' + error.message);
+                failed++;
+            }
+        }
+
+        function assertEqual(actual, expected, msg) {
+            if (actual !== expected) {
+                throw new Error('Expected ' + expected + ', got ' + actual + '. ' + (msg || ''));
+            }
+        }
+
+        function assertTrue(condition, msg) {
+            if (!condition) {
+                throw new Error('Expected true, got false. ' + (msg || ''));
+            }
+        }
+
+        console.log('\\n=== Addition Tests ===\\n');
+
+        test('generateAddition generates valid addition problems (limit 10)', function() {
+            const problem = MathGame.generateAddition(10);
+            assertEqual(problem.num1 + problem.num2, problem.answer);
+            assertTrue(problem.num1 >= 1 && problem.num1 <= 10);
+            assertTrue(problem.num2 >= 1 && problem.num2 <= 10);
+            assertTrue(problem.answer <= 10);
+        });
+
+        test('generateAddition generates valid addition problems (limit 20)', function() {
+            const problem = MathGame.generateAddition(20);
+            assertEqual(problem.num1 + problem.num2, problem.answer);
+            assertTrue(problem.num1 >= 1 && problem.num1 <= 20);
+            assertTrue(problem.num2 >= 1 && problem.num2 <= 20);
+            assertTrue(problem.answer <= 20);
+        });
+
+        test('testAddition passes for limit 10', function() {
+            const result = MathGame.testAddition(10, 50);
+            assertTrue(result.allPassed, 'All addition problems should be valid');
+            assertEqual(result.results.length, 50, 'Should generate 50 test cases');
+        });
+
+        test('testAddition passes for limit 20', function() {
+            const result = MathGame.testAddition(20, 50);
+            assertTrue(result.allPassed, 'All addition problems should be valid');
+            assertEqual(result.results.length, 50, 'Should generate 50 test cases');
+        });
+
+        console.log('\\n=== Subtraction Tests ===\\n');
+
+        test('generateSubtraction generates valid subtraction problems (limit 10)', function() {
+            const problem = MathGame.generateSubtraction(10);
+            assertEqual(problem.num1 - problem.num2, problem.answer);
+            assertTrue(problem.num1 >= 1 && problem.num1 <= 10);
+            assertTrue(problem.num2 >= 1 && problem.num2 <= 10);
+            assertTrue(problem.num1 >= problem.num2);
+            assertTrue(problem.answer >= 0);
+        });
+
+        test('generateSubtraction generates valid subtraction problems (limit 20)', function() {
+            const problem = MathGame.generateSubtraction(20);
+            assertEqual(problem.num1 - problem.num2, problem.answer);
+            assertTrue(problem.num1 >= 1 && problem.num1 <= 20);
+            assertTrue(problem.num2 >= 1 && problem.num2 <= 20);
+            assertTrue(problem.num1 >= problem.num2);
+            assertTrue(problem.answer >= 0);
+        });
+
+        test('testSubtraction passes for limit 10', function() {
+            const result = MathGame.testSubtraction(10, 50);
+            assertTrue(result.allPassed, 'All subtraction problems should be valid');
+            assertEqual(result.results.length, 50, 'Should generate 50 test cases');
+        });
+
+        test('testSubtraction passes for limit 20', function() {
+            const result = MathGame.testSubtraction(20, 50);
+            assertTrue(result.allPassed, 'All subtraction problems should be valid');
+            assertEqual(result.results.length, 50, 'Should generate 50 test cases');
+        });
+
+        console.log('\\n=== Random Field Selection Tests ===\\n');
+
+        test('testRandomField shows uniform distribution', function() {
+            const result = MathGame.testRandomField(1000);
+            assertTrue(result.passed, 'Field distribution should be within 20% of expected');
+            assertEqual(result.fieldCounts.num1 + result.fieldCounts.num2 + result.fieldCounts.answer, 1000, 'Total should equal iterations');
+        });
+
+        console.log('\\n' + '='.repeat(50));
+        console.log('\\nResults: ' + passed + ' passed, ' + failed + ' failed\\n');
+    </script>
+</body>
+</html>
