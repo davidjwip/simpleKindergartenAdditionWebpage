@@ -1,0 +1,14 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "Running tests with coverage..."
+npm run test:coverage:threshold
+
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "⚠️  Coverage dropped below 80% or tests failed!"
+  echo "To skip this check, use: git commit --no-verify"
+  exit 1
+fi
+
+echo "✅ All tests passed with sufficient coverage"
