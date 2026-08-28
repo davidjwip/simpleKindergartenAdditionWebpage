@@ -8,10 +8,18 @@ A fun, interactive web application for children to practice addition and subtrac
 - **Multiple Difficulty Levels**: Practice with numbers up to 10 or 20 (toggleable checkbox)
 - **Interactive Touchpad**: Click number buttons to fill in answers (no keyboard needed!)
 - **Smart Problem Generation**: One field is randomly hidden, user must solve for it
-- **Progress Tracking**: Track solved problems with visual progress bar
+- **Progress Tracking**: Track solved problems with visual goal path to next celebration
 - **Auto-Advance**: New problem loads automatically after 2 seconds on correct answer
+- **Streak Counter**: Build and track streaks with rotating feedback messages
 - **Celebration Overlay**: 🎉 Reward screen + score reset every 10 correct answers
+- **Sound Effects & Speech**: Cheerful sounds on correct answers, optional speech feedback (with mute toggle)
+- **Personalization**: Set your name and choose a mascot from 8 options (🦊🐱🐶🐰🦁🐼🚀🦄)
 - **Responsive Design**: Works on desktop and mobile devices
+
+### Future Ideas (deferred)
+
+- **Adaptive Difficulty**: Auto-adjust number limits based on performance
+- **Picture/Real-World Questions**: Visual problem representations for concrete learning
 
 ## How to Run
 
@@ -54,8 +62,10 @@ npm run test:watch # optional: watch mode
 | File | Tests | Covers |
 |---|---|---|
 | `test/mathEngine.test.js` | 10 | Pure problem generation (+, −, limits 10 & 20), random field distribution, `evaluateAnswer` logic |
-| `test/useMathGame.test.js` | 14 | Composable state, timer crash regression, auto-advance, progress counts, celebration trigger |
-| `test/App.test.js` | 3 | Mounted `App.vue` rendering, touchpad size changes, first-empty-field fill |
+| `test/useMathGame.test.js` | 20 | Composable state, timer crash regression, auto-advance, progress counts, celebration trigger, streak tracking, rotating messages |
+| `test/App.test.js` | 6 | Mounted `App.vue` rendering, touchpad size changes, first-empty-field fill, goal track, settings button |
+| `test/useAudioFeedback.test.js` | 5 | Sound effects composable - no errors thrown, mute toggle |
+| `test/usePreferences.test.js` | 5 | Preferences composable - name/mascot, default values |
 
 ## Deploying to GitHub Pages
 

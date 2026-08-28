@@ -183,9 +183,138 @@ main {
     font-size: 0.9rem;
 }
 
+/* Operator toggle in header */
+.operator-toggle .action-btn {
+    padding: 8px 24px;
+    border-radius: 8px 0 0 8px;
+}
+.operator-toggle .action-btn:last-child {
+    border-radius: 0 8px 8px 0;
+}
+/* First button (+) is green, second button (−) is red */
+.operator-toggle .action-btn:first-child.operator-active {
+    background-color: #4ecdc4;
+    box-shadow: 0 0 0 4px rgba(78, 205, 196, 0.4);
+}
+.operator-toggle .action-btn:last-child.operator-active {
+    background-color: #ff6b6b;
+    box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.4);
+}
+
 .action-btn:hover {
     background-color: #ff5252;
     transform: scale(1.05);
+}
+
+.mute-btn {
+    background-color: #4ecdc4;
+}
+
+.mute-btn:hover {
+    background-color: #3aa897;
+}
+
+/* Settings panel for personalization */
+.settings-panel {
+    background-color: #fff;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.settings-panel h3 {
+    color: #ff6b6b;
+    margin-bottom: 15px;
+    font-size: 1.5rem;
+}
+
+.settings-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.name-input {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.name-input label {
+    font-weight: bold;
+    color: #555;
+}
+
+.name-input input {
+    width: 100%;
+    max-width: 250px;
+    padding: 10px 15px;
+    font-size: 1.1rem;
+    border: 2px solid #4ecdc4;
+    border-radius: 10px;
+    outline: none;
+}
+
+.name-input input:focus {
+    border-color: #ff6b6b;
+}
+
+.mascot-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mascot-picker label {
+    font-weight: bold;
+    color: #555;
+}
+
+.mascot-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.mascot-btn {
+    width: 60px;
+    height: 60px;
+    font-size: 2rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 15px;
+    background-color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mascot-btn:hover {
+    border-color: #4ecdc4;
+    transform: scale(1.1);
+}
+
+.mascot-btn.selected {
+    background: linear-gradient(135deg, #4ecdc4, #a8e6cf);
+    border-color: #4ecdc4;
+    color: white;
+    box-shadow: 0 4px 10px rgba(78, 205, 196, 0.4);
 }
 
 .limit-toggle {
@@ -210,6 +339,90 @@ main {
     width: 18px;
     height: 18px;
     cursor: pointer;
+}
+
+/* Limit popup */
+.limit-popup {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+}
+
+.limit-popup-content {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    min-width: 280px;
+}
+
+.limit-popup-content h3 {
+    color: #ff6b6b;
+    margin-bottom: 10px;
+    font-size: 1.5rem;
+}
+
+.limit-popup-content p {
+    color: #555;
+    margin-bottom: 20px;
+}
+
+.limit-input-group {
+    margin-bottom: 20px;
+}
+
+.limit-input-group input {
+    width: 80px;
+    height: 50px;
+    font-size: 2rem;
+    text-align: center;
+    border: 2px solid #4ecdc4;
+    border-radius: 10px;
+    outline: none;
+}
+
+.limit-presets {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.limit-preset-btn {
+    width: 50px;
+    height: 50px;
+    font-size: 1.2rem;
+    border: 2px solid #4ecdc4;
+    border-radius: 10px;
+    background-color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.limit-preset-btn:hover {
+    background-color: #e0f7fa;
+    transform: scale(1.1);
+}
+
+.limit-preset-btn:active {
+    transform: scale(0.95);
+}
+
+.limit-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
 }
 
 .feedback-area {
@@ -416,4 +629,91 @@ footer {
     .progress-fill {
         height: 20px;
     }
+}
+
+/* Streak display */
+.streak-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: linear-gradient(135deg, #fff3cd, #ffe69c);
+    border-radius: 15px;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.streak-fire {
+    font-size: 2rem;
+    animation: bounce 1s infinite alternate;
+}
+
+.streak-count {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #e67e22;
+}
+
+.streak-best {
+    font-size: 1rem;
+    color: #7f8c8d;
+    margin-left: 10px;
+}
+
+@keyframes bounce {
+    from { transform: translateY(0); }
+    to { transform: translateY(-10px); }
+}
+
+/* Goal track for progress to next celebration */
+.goal-track {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 5px;
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 15px;
+}
+
+.goal-steps {
+    display: flex;
+    gap: 5px;
+}
+
+.step {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #7f8c8d;
+    transition: all 0.3s ease;
+}
+
+.step.filled {
+    background: linear-gradient(135deg, #4ecdc4, #ff6b6b);
+    color: white;
+    box-shadow: 0 2px 8px rgba(78, 205, 196, 0.4);
+}
+
+.mascot {
+    font-size: 2.5rem;
+    animation: bounce 1s infinite alternate;
+}
+
+.goal-end {
+    font-size: 2.5rem;
+    margin-left: 10px;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
 }

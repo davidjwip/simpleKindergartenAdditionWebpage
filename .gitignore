@@ -2,3 +2,15 @@ node_modules/
 dist/
 *.log
 .DS_Store
+
+# Coverage
+coverage/
+
+# Vite temp config
+vite.config.js.timestamp-*.mjs
+
+# Husky runtime files (only commit hooks themselves)
+.husky/_/
+
+# VS Code
+.vscode/

@@ -31,6 +31,15 @@ export function useMathGame() {
     // UI state
     const feedback = ref('');
     const feedbackColor = ref('#ff6b6b');
+    
+    // Streak state
+    const streak = ref(0);
+    const bestStreak = ref(0);
+    const lastResult = ref(''); // 'correct' | 'incorrect' (for audio feedback)
+
+    // Message pools for variety
+    const CORRECT_MESSAGES = ['Correct! 🎉', 'Great job! ⭐', 'Awesome! 🌟', 'You did it! 💪', 'Super! 🎈'];
+    const ENCOURAGEMENT_MESSAGES = ['Incorrect 😊 Try again!', 'So close! You’ve got this!', 'No worries, have another go!', 'Almost there! Keep going!'];
 
     // Internal timer / generation guard (mirrors the crash fix in the original)
     let touchpadTimer = null;
@@ -77,6 +86,7 @@ export function useMathGame() {
 
         clearTimer();
         feedback.value = '';
+        lastResult.value = ''; // Reset result for audio re-arming
 
         const problem =
             operator.value === '+' ? generateAddition(maxLimit.value) : generateSubtraction(maxLimit.value);
@@ -134,15 +144,30 @@ export function useMathGame() {
 
         if (isCorrect) {
             feedbackColor.value = '#4ecdc4';
-            feedback.value = 'Correct! 🎉';
+            // Use rotating correct message
+            feedback.value = CORRECT_MESSAGES[problemsSolved.value % CORRECT_MESSAGES.length];
             problemsSolved.value++;
             totalProblems.value++;
+            
+            // Update streak
+            streak.value++;
+            if (streak.value > bestStreak.value) {
+                bestStreak.value = streak.value;
+            }
+            lastResult.value = 'correct';
+            
             updateProgress();
             startTimer();
         } else {
             feedbackColor.value = '#ff6b6b';
-            feedback.value = 'Incorrect 😊';
+            // Use rotating encouragement message
+            feedback.value = ENCOURAGEMENT_MESSAGES[totalProblems.value % ENCOURAGEMENT_MESSAGES.length];
             totalProblems.value++;
+            
+            // Reset streak on incorrect
+            streak.value = 0;
+            lastResult.value = 'incorrect';
+            
             updateProgress();
             clearTimer();
             touchpadTimer = setTimeout(() => {
@@ -164,6 +189,8 @@ export function useMathGame() {
     function resetProgress() {
         problemsSolved.value = 0;
         totalProblems.value = 0;
+        streak.value = 0;
+        lastResult.value = '';
     }
 
     function setProgressCallback(cb) {
@@ -183,6 +210,9 @@ export function useMathGame() {
         progressPercent,
         isAdd,
         maxLimit,
+        streak,
+        bestStreak,
+        lastResult,
         // actions
         generateNewProblem,
         checkAnswer,

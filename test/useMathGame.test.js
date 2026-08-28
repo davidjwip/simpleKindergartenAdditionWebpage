@@ -200,3 +200,170 @@ describe('subsequent operator correctness', () => {
         expect(game.problemsSolved.value).toBe(1);
     });
 });
+
+describe('streak tracking', () => {
+    it('increments streak on correct answers', () => {
+        game.generateNewProblem();
+        game.num1.value = '2';
+        game.num2.value = '3';
+        game.answer.value = '5';
+        game.checkAnswer();
+        expect(game.streak.value).toBe(1);
+        expect(game.lastResult.value).toBe('correct');
+        
+        game.generateNewProblem();
+        game.num1.value = '1';
+        game.num2.value = '1';
+        game.answer.value = '2';
+        game.checkAnswer();
+        expect(game.streak.value).toBe(2);
+        expect(game.lastResult.value).toBe('correct');
+    });
+
+    it('resets streak to 0 on incorrect answer', () => {
+        game.generateNewProblem();
+        game.num1.value = '2';
+        game.num2.value = '3';
+        game.answer.value = '5';
+        game.checkAnswer();
+        expect(game.streak.value).toBe(1);
+        
+        game.generateNewProblem();
+        game.num1.value = '2';
+        game.num2.value = '3';
+        game.answer.value = '9'; // wrong
+        game.checkAnswer();
+        expect(game.streak.value).toBe(0);
+        expect(game.lastResult.value).toBe('incorrect');
+    });
+
+    it('tracks bestStreak across resets', () => {
+        game.generateNewProblem();
+        game.num1.value = '2';
+        game.num2.value = '3';
+        game.answer.value = '5';
+        game.checkAnswer();
+        expect(game.streak.value).toBe(1);
+        expect(game.bestStreak.value).toBe(1);
+        
+        game.generateNewProblem();
+        game.num1.value = '1';
+        game.num2.value = '1';
+        game.answer.value = '2';
+        game.checkAnswer();
+        expect(game.streak.value).toBe(2);
+        expect(game.bestStreak.value).toBe(2);
+        
+        // Get one wrong
+        game.generateNewProblem();
+        game.num1.value = '2';
+        game.num2.value = '3';
+        game.answer.value = '9'; // wrong
+        game.checkAnswer();
+        expect(game.streak.value).toBe(0);
+        expect(game.bestStreak.value).toBe(2); // best is preserved
+        
+        // Build streak back up
+        game.generateNewProblem();
+        game.num1.value = '2';
+        game.num2.value = '3';
+        game.answer.value = '5';
+        game.checkAnswer();
+        expect(game.streak.value).toBe(1);
+        expect(game.bestStreak.value).toBe(2); // not exceeded yet
+        
+        game.generateNewProblem();
+        game.num1.value = '1';
+        game.num2.value = '1';
+        game.answer.value = '2';
+        game.checkAnswer();
+        expect(game.streak.value).toBe(2);
+        expect(game.bestStreak.value).toBe(2); // tied
+        
+        game.generateNewProblem();
+        game.num1.value = '3';
+        game.num2.value = '2';
+        game.answer.value = '5';
+        game.checkAnswer();
+        expect(game.streak.value).toBe(3);
+        expect(game.bestStreak.value).toBe(3); // new best
+    });
+
+    it('resets streak on resetProgress', () => {
+        game.generateNewProblem();
+        game.num1.value = '2';
+        game.num2.value = '3';
+        game.answer.value = '5';
+        game.checkAnswer();
+        expect(game.streak.value).toBe(1);
+        
+        game.resetProgress();
+        expect(game.streak.value).toBe(0);
+        expect(game.bestStreak.value).toBe(1); // best is preserved
+        expect(game.lastResult.value).toBe('');
+    });
+});
+
+describe('rotating feedback messages', () => {
+    it('uses rotating messages for correct answers', () => {
+        game.generateNewProblem();
+        game.num1.value = '2';
+        game.num2.value = '3';
+        game.answer.value = '5';
+        game.checkAnswer();
+        const firstMsg = game.feedback.value;
+        
+        game.generateNewProblem();
+        game.num1.value = '1';
+        game.num2.value = '1';
+        game.answer.value = '2';
+        game.checkAnswer();
+        const secondMsg = game.feedback.value;
+        
+        expect(firstMsg).not.toBe(secondMsg);
+        expect(firstMsg).toMatch(/Correct!|Great job!|Awesome!|You did it!|Super!/);
+        expect(secondMsg).toMatch(/Correct!|Great job!|Awesome!|You did it!|Super!/);
+    });
+
+    it('uses rotating encouragement messages for incorrect answers', () => {
+        game.generateNewProblem();
+        game.num1.value = '2';
+        game.num2.value = '3';
+        game.answer.value = '9'; // wrong
+        game.checkAnswer();
+        const firstMsg = game.feedback.value;
+        
+        game.generateNewProblem();
+        game.num1.value = '1';
+        game.num2.value = '1';
+        game.answer.value = '3'; // wrong
+        game.checkAnswer();
+        const secondMsg = game.feedback.value;
+        
+        expect(firstMsg).not.toBe(secondMsg);
+        // Encouragement messages should contain these phrases
+        expect(firstMsg).toMatch(/Try again|got this|No worries|Keep going/);
+        expect(secondMsg).toMatch(/Try again|got this|No worries|Keep going/);
+    });
+
+    it('resets lastResult when generating a new problem for audio re-arming', () => {
+        game.generateNewProblem();
+        // Make a correct answer
+        game.num1.value = '2';
+        game.num2.value = '3';
+        game.answer.value = '5';
+        game.checkAnswer();
+        expect(game.lastResult.value).toBe('correct');
+        
+        // Generate new problem - should reset lastResult
+        game.generateNewProblem();
+        expect(game.lastResult.value).toBe('');
+        
+        // Make another correct answer - should trigger audio (same value, but because we reset it)
+        game.num1.value = '1';
+        game.num2.value = '1';
+        game.answer.value = '2';
+        game.checkAnswer();
+        expect(game.lastResult.value).toBe('correct');
+    });
+});
