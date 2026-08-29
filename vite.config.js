@@ -7,13 +7,7 @@ export default defineConfig({
     // e.g. GitHub Pages at https://<user>.github.io/<repo>/
     base: './',
     test: {
-        environment: 'jsdom',
-        environmentOptions: {
-            jsdom: {
-                resources: 'usable',
-                runScripts: 'dangerously'
-            }
-        },
+        environment: 'happy-dom',
         setupFiles: ['./test/setup.js'],
         coverage: {
             provider: 'v8',

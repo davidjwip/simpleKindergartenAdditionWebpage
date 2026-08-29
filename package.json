@@ -4,6 +4,10 @@
   "version": "0.1.0",
   "description": "Fun math practice for kindergarten kids (Vue 3 migration)",
   "type": "module",
+  "engines": {
+    "node": ">=24.15.0",
+    "npm": ">=10"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
