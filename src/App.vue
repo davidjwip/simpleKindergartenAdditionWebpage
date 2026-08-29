@@ -145,11 +145,11 @@ function closeCelebration() {
             </h1>
             <p class="instructions">Learn Addition &amp; Subtraction</p>
             <div class="header-actions">
-                <button class="action-btn small" style="margin-top: 10px;" @click="showInstructions = !showInstructions">
+                <button class="action-btn small" @click="showInstructions = !showInstructions">
                     {{ showInstructions ? 'Close' : 'How to Use' }}
                 </button>
                 <!-- Operator toggle in header -->
-                <div class="operator-toggle" style="display: inline-flex; gap: 8px; margin-left: 10px; margin-top: 10px;">
+                <div class="operator-toggle">
                     <button
                         class="action-btn small"
                         :class="{ 'operator-active': operator === '+' }"
@@ -162,13 +162,13 @@ function closeCelebration() {
                     >−</button>
                 </div>
                 <!-- Limit button -->
-                <button class="action-btn small" style="margin-left: 10px;" @click="openLimitPopup">
+                <button class="action-btn small" @click="openLimitPopup">
                     🔢 Limit: {{ maxLimit }}
                 </button>
-                <button class="action-btn small mute-btn" style="margin-left: 10px;" @click="toggleMuted" :title="isMuted ? 'Unmute sounds' : 'Mute sounds'">
+                <button class="action-btn small mute-btn" @click="toggleMuted" :title="isMuted ? 'Unmute sounds' : 'Mute sounds'">
                     {{ isMuted ? '🔇' : '🔊' }}
                 </button>
-                <button class="action-btn small" style="margin-left: 10px;" @click="showSettings = !showSettings" :title="playerName ? 'Edit profile' : 'Set your name'">
+                <button class="action-btn small" @click="showSettings = !showSettings" :title="playerName ? 'Edit profile' : 'Set your name'">
                     👤
                 </button>
             </div>

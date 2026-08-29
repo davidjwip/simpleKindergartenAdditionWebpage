@@ -182,9 +182,19 @@ main {
     padding: 8px 16px;
     font-size: 0.9rem;
 }
+.header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+}
 
-/* Operator toggle in header */
-.operator-toggle .action-btn {
+.operator-toggle {
+    display: inline-flex;
+    gap: 4px;
+}
     padding: 8px 24px;
     border-radius: 8px 0 0 8px;
 }
@@ -629,6 +639,55 @@ footer {
     .progress-fill {
         height: 20px;
     }
+
+    /* Header actions responsiveness */
+    .header-actions {
+        gap: 6px;
+    }
+
+    .header-actions .action-btn.small {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+
+    .operator-toggle .action-btn.small {
+        padding: 6px 14px;
+    }
+
+    /* Fluid goal track on small screens */
+    .goal-track {
+        justify-content: center;
+        padding: 8px;
+    }
+
+    .goal-steps {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 5px;
+        width: 100%;
+    }
+
+    .step {
+        width: 100%;
+        height: auto;
+        max-width: 42px;
+        aspect-ratio: 1;
+        justify-self: center;
+        font-size: 0.85rem;
+    }
+
+    .mascot {
+        font-size: 1.5rem;
+    }
+
+    .goal-end {
+        font-size: 1.5rem;
+        margin-left: 5px;
+    }
+
+    .progress-area {
+        padding: 10px;
+    }
 }
 
 /* Streak display */
@@ -669,9 +728,10 @@ footer {
 /* Goal track for progress to next celebration */
 .goal-track {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 5px;
+    gap: 6px;
     margin-bottom: 15px;
     padding: 10px;
     background-color: #f8f9fa;
@@ -680,6 +740,8 @@ footer {
 
 .goal-steps {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 5px;
 }
 
