@@ -1,13 +1,12 @@
-// useAudioFeedback.test.js — tests for the audio feedback composable
-// Tests verify muted state, mute toggle, and that audio functions don't throw.
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { useAudioFeedback } from '../src/useAudioFeedback';
+import { useAudioFeedback, _resetAudioContext } from '../src/useAudioFeedback';
 
 const AUDIO_MUTE_KEY = 'mathGame.muted';
 
 describe('useAudioFeedback', () => {
     beforeEach(() => {
         localStorage.clear();
+        _resetAudioContext();
         vi.restoreAllMocks();
     });
 
@@ -71,5 +70,40 @@ describe('useAudioFeedback', () => {
         toggleMuted();
         expect(isMuted.value).toBe(true);
         expect(() => playCelebration()).not.toThrow();
+    });
+
+    it('reuses a single AudioContext across multiple sound plays', () => {
+        const mockCtx = {
+            state: 'running',
+            currentTime: 0,
+            destination: {},
+            createOscillator: () => ({
+                connect: vi.fn(),
+                frequency: { setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn() },
+                start: vi.fn(),
+                stop: vi.fn(),
+                type: 'sine',
+            }),
+            createGain: () => ({
+                connect: vi.fn(),
+                gain: { setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+            }),
+            resume: vi.fn(),
+        };
+
+        const AudioContextSpy = vi.fn(() => mockCtx);
+        vi.stubGlobal('AudioContext', AudioContextSpy);
+
+        const { playCorrect, playIncorrect, playCelebration } = useAudioFeedback();
+
+        playCorrect();
+        playCorrect();
+        playIncorrect();
+        playCelebration();
+        playCelebration();
+
+        expect(AudioContextSpy).toHaveBeenCalledTimes(1);
+
+        vi.unstubAllGlobals();
     });
 });
