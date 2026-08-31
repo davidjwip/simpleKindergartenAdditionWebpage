@@ -44,6 +44,8 @@ export function useMathGame() {
     // Internal timer / generation guard (mirrors the crash fix in the original)
     let touchpadTimer = null;
     let isGenerating = false;
+    let isLocked = ref(false);
+    let lastProblem = null;
 
     // Optional callback fired whenever progress updates
     let progressCallback = null;
@@ -87,9 +89,31 @@ export function useMathGame() {
         clearTimer();
         feedback.value = '';
         lastResult.value = ''; // Reset result for audio re-arming
+        isLocked.value = false;
 
-        const problem =
-            operator.value === '+' ? generateAddition(maxLimit.value) : generateSubtraction(maxLimit.value);
+        let problem;
+        let currentProblem;
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        do {
+            problem =
+                operator.value === '+' ? generateAddition(maxLimit.value) : generateSubtraction(maxLimit.value);
+            
+            currentProblem = {
+                num1: operator.value === '+' ? problem.num1 : problem.num1,
+                num2: operator.value === '+' ? problem.num2 : problem.num2,
+                answer: operator.value === '+' ? problem.answer : problem.num1 - problem.num2
+            };
+            
+            attempts++;
+        } while (lastProblem !== null && 
+                 currentProblem.num1 === lastProblem.num1 && 
+                 currentProblem.num2 === lastProblem.num2 && 
+                 currentProblem.answer === lastProblem.answer &&
+                 attempts < maxAttempts);
+
+        lastProblem = currentProblem;
 
         const emptyField = pickRandomField();
         const answerText = String(
@@ -118,6 +142,7 @@ export function useMathGame() {
 
     function fillValue(value) {
         // populate the first empty field, then auto-check
+        if (isLocked.value) return;
         if (num1.value === '') {
             num1.value = String(value);
         } else if (num2.value === '') {
@@ -157,6 +182,7 @@ export function useMathGame() {
             lastResult.value = 'correct';
             
             updateProgress();
+            isLocked.value = true;
             startTimer();
         } else {
             feedbackColor.value = '#ff6b6b';
@@ -170,6 +196,7 @@ export function useMathGame() {
             
             updateProgress();
             clearTimer();
+            isLocked.value = true;
             touchpadTimer = setTimeout(() => {
                 generateNewProblem();
             }, INCORRECT_RETRY_DELAY);
@@ -213,6 +240,7 @@ export function useMathGame() {
         streak,
         bestStreak,
         lastResult,
+        isLocked,
         // actions
         generateNewProblem,
         checkAnswer,
