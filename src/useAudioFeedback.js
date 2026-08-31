@@ -1,29 +1,35 @@
-/**
- * useAudioFeedback.js — Vue composable for sound effects.
- * Uses Web Audio API for beeps. All APIs are guarded to avoid errors
- * in non-browser/test environments.
- */
 import { ref, onMounted } from 'vue';
 
 const AUDIO_MUTE_KEY = 'mathGame.muted';
 
-/**
- * Play a short pleasant chime using Web Audio API.
- * Returns silently if AudioContext is unavailable.
- */
+let sharedCtx = null;
+
+function getAudioContext() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+
+    if (!sharedCtx || sharedCtx.state === 'closed') {
+        sharedCtx = new AudioContextClass();
+    }
+
+    if (sharedCtx.state === 'suspended') {
+        sharedCtx.resume();
+    }
+
+    return sharedCtx;
+}
+
 function playCorrectChime() {
     try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) return;
+        const ctx = getAudioContext();
+        if (!ctx) return;
 
-        const ctx = new AudioContext();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
 
         osc.connect(gain);
         gain.connect(ctx.destination);
 
-        // Play a cheerful major chord arpeggio: C4 -> E4 -> G4
         const now = ctx.currentTime;
         osc.type = 'sine';
         osc.frequency.setValueAtTime(523.25, now); // C4
@@ -40,15 +46,11 @@ function playCorrectChime() {
     }
 }
 
-/**
- * Play a soft descending tone for incorrect answers.
- */
 function playIncorrectTone() {
     try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) return;
+        const ctx = getAudioContext();
+        if (!ctx) return;
 
-        const ctx = new AudioContext();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
 
@@ -70,23 +72,17 @@ function playIncorrectTone() {
     }
 }
 
-/**
- * Play a celebratory fanfare for the 10-problem reward screen.
- * Returns silently if AudioContext is unavailable.
- */
 function playCelebrationFanfare() {
     try {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) return;
+        const ctx = getAudioContext();
+        if (!ctx) return;
 
-        const ctx = new AudioContext();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
 
         osc.connect(gain);
         gain.connect(ctx.destination);
 
-        // Rising C-major arpeggio: C5 -> E5 -> G5 -> C6, then sustain chord
         const now = ctx.currentTime;
         osc.type = 'sine';
         osc.frequency.setValueAtTime(1046.50, now); // C5
@@ -94,7 +90,6 @@ function playCelebrationFanfare() {
         osc.frequency.setValueAtTime(1567.98, now + 0.30); // G5
         osc.frequency.setValueAtTime(2093.00, now + 0.45); // C6
 
-        // Sustain the chord for 1 second
         gain.gain.setValueAtTime(0.15, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
 
@@ -143,4 +138,8 @@ export function useAudioFeedback() {
         playIncorrect,
         playCelebration
     };
+}
+
+export function _resetAudioContext() {
+    sharedCtx = null;
 }
