@@ -18,6 +18,7 @@ const {
     streak,
     bestStreak,
     lastResult,
+    isLocked,
     generateNewProblem,
     fillValue,
     setOperator,
@@ -268,6 +269,7 @@ function closeCelebration() {
                         v-for="n in maxLimit"
                         :key="n"
                         class="touchpad-btn"
+                        :disabled="isLocked"
                         @click="fillValue(n)"
                     >
                         {{ n }}
@@ -289,13 +291,20 @@ function closeCelebration() {
         <div class="progress-area">
             <h2>Path to the Party! 🎉</h2>
             <div class="goal-track">
-                <div class="goal-steps">
-                    <div class="step" v-for="i in 10" :key="i" :class="{ filled: i <= problemsSolved % 10 }">
-                        {{ i }}
-                    </div>
-                </div>
                 <div class="mascot" v-if="streak > 0">
                     {{ mascot }}
+                </div>
+                <div class="goal-steps-wrapper">
+                    <div class="goal-steps">
+                        <div class="step" v-for="i in 5" :key="i" :class="{ filled: i <= problemsSolved % 10 }">
+                            {{ i }}
+                        </div>
+                    </div>
+                    <div class="goal-steps">
+                        <div class="step" v-for="i in 5" :key="i + 5" :class="{ filled: i + 5 <= problemsSolved % 10 }">
+                            {{ i + 5 }}
+                        </div>
+                    </div>
                 </div>
                 <div class="goal-end">
                     🎉

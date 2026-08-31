@@ -8,6 +8,7 @@ A fun, interactive web application for children to practice addition and subtrac
 - **Multiple Difficulty Levels**: Practice with numbers up to 10 or 20 (toggleable checkbox)
 - **Interactive Touchpad**: Click number buttons to fill in answers (no keyboard needed!)
 - **Smart Problem Generation**: One field is randomly hidden, user must solve for it
+- **No Duplicate Questions**: Prevents consecutive identical problems for better learning
 - **Progress Tracking**: Track solved problems with visual goal path to next celebration
 - **Auto-Advance**: New problem loads automatically after 2 seconds on correct answer
 - **Streak Counter**: Build and track streaks with rotating feedback messages
@@ -15,6 +16,17 @@ A fun, interactive web application for children to practice addition and subtrac
 - **Sound Effects & Speech**: Cheerful sounds on correct answers, optional speech feedback (with mute toggle)
 - **Personalization**: Set your name and choose a mascot from 8 options (🦊🐱🐶🐰🦁🐼🚀🦄)
 - **Responsive Design**: Works on desktop and mobile devices
+
+### Layout Improvements
+- **Adaptive Number Pad**: Touchpad size adjusts based on number limit (5 columns for 1-10, ~4.5 for 1-20)
+- **"Path to the Party" Layout**: Numbers 1-5 on first row, 6-10 on second row with mascot on left and celebration emoji on right
+
+### Bug Fixes
+- **Input Protection**: Number pad is disabled during auto-advance/retry delays to prevent user confusion
+- **Subtraction Safety**: No zero answers in subtraction (kids don't know negative numbers yet)
+
+- **Subtraction Safety**: No zero answers in subtraction (kids don't know negative numbers yet)
+- **Input Protection**: Number pad is disabled during auto-advance/retry delays to prevent user confusion
 
 ### Future Ideas (deferred)
 
@@ -129,6 +141,13 @@ tests, while mount-level tests verify the UI wiring.
 - **Answer logic** — correct answer evaluation regardless of which field is
   left blank; zero is valid; blank/incomplete input returns "Please fill in all fields!".
 - **Progress tracking** — attempts (`totalProblems`) vs solved counted correctly.
+- **No duplicate consecutive questions** — `lastProblem` tracking prevents the same
+  (num1, num2, answer) from appearing twice in a row.
+- **Subtraction no-zero** — num2 uses [0, num1-1] range so answers are always ≥1.
+- **Input protection** — `isLocked` flag disables touchpad during auto-advance and
+  retry delays to prevent user confusion.
+- **"Path to the Party" layout** — numbers split across two rows (1-5, 6-10) with
+  mascot on left and celebration emoji on right for better small-screen layout.
 
 ## License
 

@@ -40,7 +40,7 @@ describe('generateSubtraction', () => {
         const p = generateSubtraction(10);
         expect(p.num1 - p.num2).toBe(p.answer);
         expect(p.num1).toBeGreaterThanOrEqual(p.num2);
-        expect(p.answer).toBeGreaterThanOrEqual(0);
+        expect(p.answer).toBeGreaterThanOrEqual(1);
     });
 
     it('produces a valid subtraction problem (limit 20)', () => {
@@ -50,8 +50,12 @@ describe('generateSubtraction', () => {
     });
 
     it('all generated problems pass the strict check (limit 10 and 20)', () => {
-        expect(testSubtraction(10, 50).allPassed).toBe(true);
-        expect(testSubtraction(20, 50).allPassed).toBe(true);
+        const result10 = testSubtraction(10, 50);
+        const result20 = testSubtraction(20, 50);
+        expect(result10.allPassed).toBe(true);
+        expect(result20.allPassed).toBe(true);
+        result10.results.forEach(r => expect(r.answer).toBeGreaterThanOrEqual(1));
+        result20.results.forEach(r => expect(r.answer).toBeGreaterThanOrEqual(1));
     });
 });
 

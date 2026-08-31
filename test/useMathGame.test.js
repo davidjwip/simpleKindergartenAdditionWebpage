@@ -367,3 +367,68 @@ describe('rotating feedback messages', () => {
         expect(game.lastResult.value).toBe('correct');
     });
 });
+
+describe('consecutive duplicate prevention', () => {
+    it('prevents the same problem from appearing twice in a row', () => {
+        game.generateNewProblem();
+        const firstNum1 = game.num1.value;
+        const firstNum2 = game.num2.value;
+        const firstAnswer = game.answer.value;
+        
+        game.generateNewProblem();
+        
+        const isDuplicate = game.num1.value === firstNum1 && 
+                           game.num2.value === firstNum2 && 
+                           game.answer.value === firstAnswer;
+        
+        expect(isDuplicate).toBe(false);
+    });
+});
+
+describe('locked state behavior', () => {
+    it('isLocked is true during auto-advance delay after correct answer', () => {
+        game.generateNewProblem();
+        game.num1.value = '2';
+        game.num2.value = '3';
+        game.answer.value = '5';
+        game.checkAnswer();
+        
+        expect(game.isLocked.value).toBe(true);
+    });
+
+    it('isLocked is true during retry delay after incorrect answer', () => {
+        game.generateNewProblem();
+        game.num1.value = '2';
+        game.num2.value = '3';
+        game.answer.value = '9'; // wrong
+        game.checkAnswer();
+        
+        expect(game.isLocked.value).toBe(true);
+    });
+
+    it('fillValue does nothing when isLocked is true', () => {
+        game.isLocked.value = true;
+        
+        // Set a value in the answer field to simulate a locked state
+        game.answer.value = '5';
+        
+        // Try to fill another value - should be ignored because isLocked is true
+        game.fillValue(7);
+        
+        expect(game.answer.value).toBe('5');
+    });
+
+    it('isLocked becomes false when generating a new problem', () => {
+        game.generateNewProblem();
+        game.num1.value = '2';
+        game.num2.value = '3';
+        game.answer.value = '5';
+        game.checkAnswer();
+        
+        expect(game.isLocked.value).toBe(true);
+        
+        vi.advanceTimersByTime(2000);
+        
+        expect(game.isLocked.value).toBe(false);
+    });
+});

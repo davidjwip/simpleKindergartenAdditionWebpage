@@ -126,6 +126,14 @@ main {
     transform: scale(0.95);
 }
 
+.touchpad-btn:disabled {
+    background-color: #f0f0f0;
+    border-color: #cccccc;
+    color: #999999;
+    cursor: not-allowed;
+    transform: none;
+}
+
 .buttons {
     display: flex;
     justify-content: center;
@@ -729,7 +737,7 @@ footer {
 /* Goal track for progress to next celebration */
 .goal-track {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: space-between;
     gap: 6px;
@@ -739,9 +747,16 @@ footer {
     border-radius: 15px;
 }
 
+.goal-steps-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
 .goal-steps {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: center;
     gap: 5px;
 }
@@ -769,11 +784,12 @@ footer {
 .mascot {
     font-size: 2.5rem;
     animation: bounce 1s infinite alternate;
+    flex-shrink: 0;
 }
 
 .goal-end {
     font-size: 2.5rem;
-    margin-left: 10px;
+    flex-shrink: 0;
 }
 
 @keyframes pulse {
