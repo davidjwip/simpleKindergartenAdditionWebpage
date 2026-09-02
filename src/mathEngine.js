@@ -21,8 +21,11 @@ export function generateAddition(maxLimit) {
 }
 
 export function generateSubtraction(maxLimit) {
-    const num1 = Math.floor(Math.random() * maxLimit) + 1;
-    const num2 = Math.floor(Math.random() * num1);
+    let num1, num2;
+    do {
+        num1 = Math.floor(Math.random() * maxLimit) + 1;
+        num2 = Math.floor(Math.random() * num1);
+    } while (num2 === 0 || num1 === 1);
     return { num1, num2, answer: num1 - num2 };
 }
 
