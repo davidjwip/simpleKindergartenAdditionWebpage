@@ -23,10 +23,7 @@ A fun, interactive web application for children to practice addition and subtrac
 
 ### Bug Fixes
 - **Input Protection**: Number pad is disabled during auto-advance/retry delays to prevent user confusion
-- **Subtraction Safety**: No zero answers in subtraction (kids don't know negative numbers yet)
-
-- **Subtraction Safety**: No zero answers in subtraction (kids don't know negative numbers yet)
-- **Input Protection**: Number pad is disabled during auto-advance/retry delays to prevent user confusion
+- **Subtraction Safety**: No zeros anywhere in subtraction (num1≥2, num2≥1, answer≥1) since 0 not on numpad
 
 ### Future Ideas (deferred)
 
@@ -69,15 +66,15 @@ npm test           # runs tests once
 npm run test:watch # optional: watch mode
 ```
 
-**27 tests** across 3 files:
+**70 tests** across 5 files:
 
 | File | Tests | Covers |
 |---|---|---|
-| `test/mathEngine.test.js` | 10 | Pure problem generation (+, −, limits 10 & 20), random field distribution, `evaluateAnswer` logic |
-| `test/useMathGame.test.js` | 20 | Composable state, timer crash regression, auto-advance, progress counts, celebration trigger, streak tracking, rotating messages |
-| `test/App.test.js` | 6 | Mounted `App.vue` rendering, touchpad size changes, first-empty-field fill, goal track, settings button |
-| `test/useAudioFeedback.test.js` | 5 | Sound effects composable - no errors thrown, mute toggle |
-| `test/usePreferences.test.js` | 5 | Preferences composable - name/mascot, default values |
+| `test/mathEngine.test.js` | 12 | Pure problem generation (+, −, limits 10 & 20), random field distribution, `evaluateAnswer`, subtraction no-zeros guarantees |
+| `test/useMathGame.test.js` | 26 | Composable state, timer crash regression, auto-advance, progress counts, celebration trigger, streak tracking, rotating messages, locked state |
+| `test/App.test.js` | 15 | Mounted `App.vue` rendering, touchpad size changes, first-empty-field fill, goal track, settings button, celebration overlay |
+| `test/useAudioFeedback.test.js` | 9 | Sound effects composable - no errors thrown, mute toggle, sound playing |
+| `test/usePreferences.test.js` | 8 | Preferences composable - name/mascot, default values, localStorage persistence |
 
 ## Deploying to GitHub Pages
 
@@ -109,9 +106,11 @@ simpleKindergartenAdditionWebpage/
 │   ├── mathEngine.js       # Pure, framework-free math logic (testable)
 │   └── style.css           # Global styles + responsive + celebration CSS
 ├── test/
-│   ├── mathEngine.test.js  # Pure logic unit tests
-│   ├── useMathGame.test.js # Composable/logic tests (fake timers)
-│   └── App.test.js         # Mounted component tests (@vue/test-utils)
+│   ├── mathEngine.test.js      # Pure logic unit tests (12 tests)
+│   ├── useMathGame.test.js     # Composable/logic tests (26 tests, fake timers)
+│   ├── App.test.js             # Mounted component tests (15 tests)
+│   ├── useAudioFeedback.test.js # Sound effects composable tests (9 tests)
+│   └── usePreferences.test.js  # Preferences composable tests (8 tests)
 ├── AGENTS.md               # Development guidelines
 ├── README.md               # This file
 ├── test-plan.md            # Testing plan
@@ -143,7 +142,7 @@ tests, while mount-level tests verify the UI wiring.
 - **Progress tracking** — attempts (`totalProblems`) vs solved counted correctly.
 - **No duplicate consecutive questions** — `lastProblem` tracking prevents the same
   (num1, num2, answer) from appearing twice in a row.
-- **Subtraction no-zero** — num2 uses [0, num1-1] range so answers are always ≥1.
+- **Subtraction no-zero** — num1≥2, num2≥1, answer≥1 (no zeros anywhere, 0 not on numpad).
 - **Input protection** — `isLocked` flag disables touchpad during auto-advance and
   retry delays to prevent user confusion.
 - **"Path to the Party" layout** — numbers split across two rows (1-5, 6-10) with

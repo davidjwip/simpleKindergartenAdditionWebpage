@@ -21,8 +21,11 @@ export function generateAddition(maxLimit) {
 }
 
 export function generateSubtraction(maxLimit) {
-    const num1 = Math.floor(Math.random() * maxLimit) + 1;
-    const num2 = Math.floor(Math.random() * num1);
+    let num1, num2;
+    do {
+        num1 = Math.floor(Math.random() * maxLimit) + 1;
+        num2 = Math.floor(Math.random() * num1);
+    } while (num2 === 0 || num1 === 1);
     return { num1, num2, answer: num1 - num2 };
 }
 
@@ -72,9 +75,9 @@ export function testSubtraction(maxLimit, iterations = 100) {
     for (let i = 0; i < iterations; i++) {
         const problem = generateSubtraction(maxLimit);
         const passed =
-            problem.num1 >= 1 && problem.num2 >= 0 &&
+            problem.num1 >= 2 && problem.num2 >= 1 &&
             problem.num1 <= maxLimit && problem.num2 <= maxLimit &&
-            problem.num1 >= problem.num2 && problem.answer >= 1;
+            problem.num1 > problem.num2 && problem.answer >= 1;
         results.push({ num1: problem.num1, num2: problem.num2, answer: problem.answer, passed });
         if (!passed) allPassed = false;
     }
