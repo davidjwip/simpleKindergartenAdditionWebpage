@@ -57,6 +57,24 @@ describe('generateSubtraction', () => {
         result10.results.forEach(r => expect(r.answer).toBeGreaterThanOrEqual(1));
         result20.results.forEach(r => expect(r.answer).toBeGreaterThanOrEqual(1));
     });
+
+    it('generates subtraction problems without zeros (limit 10)', () => {
+        for (let i = 0; i < 100; i++) {
+            const p = generateSubtraction(10);
+            expect(p.num2).toBeGreaterThanOrEqual(1);
+            expect(p.num1).toBeGreaterThanOrEqual(2);
+            expect(p.answer).toBeGreaterThanOrEqual(1);
+        }
+    });
+
+    it('generates subtraction problems without zeros (limit 20)', () => {
+        for (let i = 0; i < 100; i++) {
+            const p = generateSubtraction(20);
+            expect(p.num2).toBeGreaterThanOrEqual(1);
+            expect(p.num1).toBeGreaterThanOrEqual(2);
+            expect(p.answer).toBeGreaterThanOrEqual(1);
+        }
+    });
 });
 
 describe('pickRandomField', () => {

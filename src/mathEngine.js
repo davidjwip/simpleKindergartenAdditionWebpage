@@ -75,9 +75,9 @@ export function testSubtraction(maxLimit, iterations = 100) {
     for (let i = 0; i < iterations; i++) {
         const problem = generateSubtraction(maxLimit);
         const passed =
-            problem.num1 >= 1 && problem.num2 >= 0 &&
+            problem.num1 >= 2 && problem.num2 >= 1 &&
             problem.num1 <= maxLimit && problem.num2 <= maxLimit &&
-            problem.num1 >= problem.num2 && problem.answer >= 1;
+            problem.num1 > problem.num2 && problem.answer >= 1;
         results.push({ num1: problem.num1, num2: problem.num2, answer: problem.answer, passed });
         if (!passed) allPassed = false;
     }
