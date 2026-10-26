@@ -80,6 +80,26 @@ multiplication (11.5 h)** and basic division, angles, quadrilaterals, pictograms
    quarters and the five-minute ring, and which has the day/week vocabulary as tier 0. Nothing in
    1M4 needs building again — only the calendar half (months, dates) is thin.
 
+### 1.4 A commercial "K1–K2" assessment paper, compared with the above
+
+Worth recording because it circulates as a benchmark. A MathConcept Education "First Steps" K1-2
+booklet examined in October 2026 (50 items) contains: written addition to 58+5 and written subtraction
+such as 21−3, 30−3, 13−5 (all needing carrying or borrowing); counting backward from 31 to 0; counting
+in 5s and 10s from 0; writing the numerals 0–20 in a grid; mental dissection ("circle the shapes made
+by these cut lines"); and "draw a line to cut the shape into half" on a cartoon animal head and on a
+rotated kite.
+
+Against the anchors: 1N2 caps addition at "within 18 verbally" and says "operations such as 12+5 and
+17–5 are not required"; 1N4 adds two-digit carrying but states "subtraction doesn't include borrowing",
+so 21−3 and 30−3 sit in **P2**; counting in 5s and 10s is **1N3 (P1)**; writing numerals to 20 is a
+**K3 milestone** and the P1 unit 1N1; and "cut the shape in half" is **Year 1 / Grade 1** material —
+HK does not introduce fractions until P3 (3N5, 9.5 h). A paper carrying a K1–K2 cover therefore spans
+P1 to P2, and one of its "fractions" items is really a symmetry task.
+
+Consequence for us: the paper is a tutoring-centre instrument, not an expectation of K2, and building
+to it would be the pre-teaching the EDB prohibits. Its value is diagnostic only — what a child cannot
+do on it is a signal about *that* child, not about the level to build at.
+
 ---
 
 ## 2. Teachable surface: what a supervised web app can and cannot carry
@@ -163,7 +183,7 @@ numerals like 1/2.
 | H2 Equal vs unequal | Two pieces of the *same* shape — are the two parts the same size? | app | **this is the rung that teaches.** The non-example is the lesson |
 | H3 Is this half? | One shape, one cut: does this show half? (vertical, horizontal, diagonal, and equal parts of a different shape) | app | the user's ask, as a discrimination |
 | H4 Find the half | Four pictures of the same shape; tap the one showing half | app | production under choice; position must be shuffled |
-| H5 Fold it | Tap where the fold line goes so the halves match | app | symmetry; a line choice, not a drag |
+| H5 Draw the cut | Tap the two ends of the line that cuts the shape into two equal pieces | app | **the school task** (Year 1 / Grade 1 wording: "draw a line to cut the shape into half"); judged on equal *area*, not symmetry — see the note below |
 | H6 Half of a quantity | Share 6 sweets between 2 plates, both the same | app | discrete halves; the bridge to 1N1 composition |
 | H7 Quarters | Cut in half twice; four equal parts | app | later, but closer than it looks: Year 1 and CCSS Grade 1 both include quarters — only thirds and equivalence wait for Year 2 / Grade 2 |
 
@@ -181,6 +201,10 @@ Traps this ladder exists to avoid, each of which a naive "half" page gets wrong:
    milestone is the piece; keep sweets for H6.
 - **A cut is not a drag.** Tap the region or tap the line; dragging a knife measures the wrist, not the
   concept.
+- **"Half" is equal area, not a line of symmetry.** A rectangle has infinitely many halving lines and a
+  square includes the diagonals; an app that judges "the" symmetry line marks correct cuts wrong. The
+  judge needs an area test (within tolerance) on the regions the cut creates. The cartoon-head item is
+  the opposite case: a symmetry task wearing a halves label.
 
 ---
 
