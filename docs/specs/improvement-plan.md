@@ -100,6 +100,27 @@ Each increment is one PR: tests written first, then code; acceptance criteria as
 
 **Closes audit defects:** none directly; it is the fix for audit §5 item 1 and decision #4 (blank uniform 1/3).
 
+### Increment 3b — Step size (the difficulty dial that is not the limit)
+
+**Purpose.** Make the size of the number being added or taken away an explicit, adult-set knob. At limit 10 the difficulty of an item is dominated by `num2`, not by the ceiling, so the limit alone cannot pitch practice at a child.
+
+**What changes.** `generateProblem(operator, limit, mode, step)`; step ∈ `1` · `2` · `3-5` · `any`, applied to `num2` for `+`/`−` and to the larger operand for `part`/`start`. The default is **`any` on every install** — content defaults in this estate are pedagogical, never personalised, the same reason the mode default is `result` for everyone. `step` is a generation parameter recorded on the per-item log entry, never a field on the item shape (the item already carries `num2`, from which the step is recoverable). Preferences gain `step` under the migration rules in unknown-position.md §7.
+
+**Why here.** It is independent of the operand-blank machinery (I3) and of the mode content (I4/I5), so it lands as its own small diff rather than riding inside another. One caution, stated rather than hidden: a small-step item is easier to *recall* as well as easier to count, so the step axis earns its keep only alongside the counters of I7. Until those exist, an adult who sets step 1–2 is choosing a pool with no representation on screen, and the default must stay `any`.
+
+**Tests first.** Engine: a 1,000-item sweep per (mode, operator, step) proving the step ceiling holds and every existing invariant survives; `step: 'any'` reproduces today's distribution. Preferences: round-trip, absent/corrupt ⇒ `any`. Composable: a step change regenerates exactly once and preserves mode.
+
+**Acceptance criteria.**
+- Given step `1`, when 200 items generate in any mode, then the added or taken-away number is always 1.
+- Given step `3-5`, then it is always 3, 4 or 5.
+- Given a fresh install, when the app loads, then step is `any`.
+- Given an adult changes step while an advance timer is pending, then the timer is cancelled and exactly one new item generates at the new step, with the mode preserved.
+- **No level transition turns mode and step together**; a mode change preserves the current step.
+
+**Risk / rollback.** Low: a pure generator input plus one preference key. Rollback: hide the setting, force `any`.
+
+**Closes audit defects:** none. It is change R1 from `revision-assessment-2026-10.md`.
+
 ### Increment 4 — Mode: "Find the missing part" (`a + ? = c`, `? + b = c`, `a − ? = c`)
 
 **Purpose.** The composition skill every cited curriculum puts first — "5 is 2 and 3" — practised as a task instead of as a random blank. Full spec: **unknown-position.md**.
@@ -120,7 +141,7 @@ Each increment is one PR: tests written first, then code; acceptance criteria as
 
 **Purpose.** The child's observed sticking point, taught with a countable representation rather than merely asked — built on a bar the child has already met in I4.
 
-**What changes.** Per unknown-position.md: mode `start`, the put-back interaction (tap the taken-away group; the ghost dots fill and the row becomes countable), the reveal that performs the put-back itself, counters forced on for this mode, and the mode's own limit cap at 10.
+**What changes.** Per unknown-position.md: mode `start`, the put-back interaction (tap the taken-away group; the ghost dots fill and the row becomes countable), the reveal that performs the put-back itself, counters forced on for this mode, and the mode's own limit cap at 10. The mode picker carries one line of copy against this mode ("keep step at 1") and against `part` ("start with step 1–2"). It advises; it does not disable. The adult is the scheduler, and a code gate here would encode one child's paper result as policy.
 
 **Why fifth.** It is the hardest form in the set and the only one whose interaction is new rather than a variation: it reuses I4's bar, adds the put-back, and would teach the wrong thing if shipped unsupported. Sequencing it last also means the child meets `? − b = c` deliberately, with counters, instead of as one random third of every session.
 
@@ -218,6 +239,8 @@ Each increment is one PR: tests written first, then code; acceptance criteria as
 
 **Principle.** Log locally, in the same `localStorage` preferences object family, nothing transmitted, nothing that identifies the child. The adult sees a summary; the child sees nothing new.
 
+**These figures measure tapping, not arithmetic.** They are a lower bound on written arithmetic, not a measurement of it: a child can be fluent here and score near zero on a written paper asking the same sums. No level change — limit, step or mode — is made by the numbers alone; the adult decides, with paper work as the other leg.
+
 **What to log per item (append-only, capped at the last ~500 events, pruned on write):**
 - timestamp (day granularity is enough), mode, operator, limit, blankField
 - correct first try / correct on retry / missed (revealed)
@@ -225,13 +248,13 @@ Each increment is one PR: tests written first, then code; acceptance criteria as
 - time-to-first-tap in coarse buckets (<2 s, 2–5 s, >5 s) — strategy signal, not a speed score: a shift from >5 s to <2 s on result-unknown is the counting→recall transition made visible
 
 **What the adult can see (settings panel, behind the 👤 screen):**
-- Per mode: first-try accuracy over the last 7 days and the trend arrow
-- Count of retries and reveals per mode (a mode needing many reveals is pitched too high — the level-matching signal from Clements & Sarama)
-- Current limit and a one-line suggestion derived only from the thresholds: e.g. "finding the total: mostly first-try at limit 10 — consider limit 15, or try 'find the missing part'"
+- Per mode × step: first-try accuracy over the last 7 days **with the reveal count beside it** and the trend arrow. Never a single rolled-up percentage for the whole app — 85% first-try with a falling reveal rate says something, a bare "80%" says nothing.
+- Count of retries and reveals per mode × step (a mode needing many reveals is pitched too high — the level-matching signal from Clements & Sarama)
+- Current limit and step, plus a sentence the adult reads rather than a verdict the app acts on: "finding the total at step 1 looks secure — you could try step 3–5, or 'find the missing part'". The app never changes a level itself.
 
 **Explicitly not measured:** per-tap telemetry, session duration, anything sent off-device (the existing analytics beacon's fate is the owner's decision — recommendation is to remove it), and no per-item adaptive engine consuming this data until a few weeks of it exist and the owner has seen it.
 
-**Success signal for the whole plan:** at limit 10, "find the total" at ≥80% first-try across a week; "find the missing part" introduced and ≥60% first-try; `? − b = c` attempted with the counters on and reveal rate falling week over week. That is the counting-strategy progression showing up in the only currency this app should trade in: what the child can do unaided.
+**Success signal for the whole plan**, stated per (mode × step) rather than per limit, because the limit is not the difficulty dial: "find the total" at step 1 and step 2 at ≥80% first-try across a week; "find the missing part" introduced at step 1–2 and ≥60% first-try; `? − b = c` attempted with the counters on and its reveal rate falling week over week. And the signal that outranks all of them: the same sums, written on paper, unaided — the app cannot see that, and the adult can.
 
 ## 6. Review disposition (round 1 — adversarial read by a second model, `reviews/spec-review-1.md`)
 
@@ -253,3 +276,20 @@ Each increment is one PR: tests written first, then code; acceptance criteria as
 | (d) retry-correct counted as solved | question | **No change.** Retry is an unaided second attempt; only the reveal is assisted and it is logged missed, so it cannot complete the goal. Streak behaviour and the "reveal never increments `problemsSolved`" criterion are now explicit in I1. |
 
 Nothing in the review was rejected. Both BLOCKERs were verified against the code before editing — `vite.config.js` really has no `coverage.thresholds`, `deploy.yml` really runs `npm test` with no coverage — and the footer exception is the owner's standing decision, not a review preference.
+
+## 7. Review disposition (round 2 — proposed changes from the October assessment)
+
+Nine changes (R1–R9) were proposed in `specs/revision-assessment-2026-10.md` and reviewed
+adversarially in `reviews/revision-review-1.md`. Verdicts and where each landed:
+
+| Item | Verdict | Landed as |
+|---|---|---|
+| R1 step-size axis | ACCEPT-WITH-CHANGES — the default must be `any`, not this child's step | Increment 3b above |
+| R2 tap accuracy is not mastery | ACCEPT | §5 caveat, per-mode × step summary, restated success signal |
+| R3 mode/step orthogonal, hard modes gated | ACCEPT-WITH-CHANGES — copy advice, not a code gate | Increment 3b criteria + the one-line picker copy in I5 |
+| R4 counting-structure tier above money | ACCEPT | scope-map §3 and §5 |
+| R5 demonstrate the split first | ACCEPT | scope-map §4 note and the POC brief |
+| R6 choose a line before placing one | ACCEPT-WITH-CHANGES — recorded as H4b, deferred past the POC | scope-map §4 |
+| R7 judge on equal area, one geometry function | ACCEPT | scope-map §4 note |
+| R8 numeral writing stays on paper | ACCEPT | scope-map §2 and §3 note |
+| R9 explicit non-changes | ACCEPT | §6 above; step is placed at 3b rather than appended to I3 |

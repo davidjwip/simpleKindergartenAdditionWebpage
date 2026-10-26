@@ -55,13 +55,19 @@ A four-year-old facing `? − 3 = 4` with only numerals will count on from nothi
 Today `generateAddition`/`generateSubtraction` return `{ num1, num2, answer }` and `pickRandomField()` decides the blank at random in `useMathGame.js`. New contract:
 
 ```
-generateProblem(operator, limit, mode) → {
+generateProblem(operator, limit, mode, step) → {
   num1, num2, answer,        // full solution, as today
   operator: '+' | '-',
   blankField: 'num1' | 'num2' | 'answer',   // decided by MODE, never random
   mode: 'result' | 'part' | 'start'
 }
 ```
+
+`step` ∈ `'1'` · `'2'` · `'3-5'` · `'any'` is a **generation parameter, not item data**: it constrains
+`num2` for `+`/`−` and the larger operand for `part`/`start`, and it is recorded on the per-item log
+entry beside `limit` and `mode`. It is deliberately absent from the returned object — the item already
+carries `num2`, so a field would be a second copy of the same fact, free to drift. The default is
+`'any'` on every install; a personalised default would ship one child's diagnosis to every user.
 
 Mode → blank mapping:
 
@@ -121,15 +127,18 @@ Properties: at most two scored taps per item; the item never changes under the c
 21. **Stored corrupt mode:** Given localStorage with `mode: "banana"`, when the app loads, then mode is `result` and play proceeds (§7).
 22. **Reveal never scores:** Given any mode, when a reveal has been shown and the next item appears, then `problemsSolved` is unchanged and the item is recorded as missed.
 23. **Limit cap in `start`:** Given `start` is selected, when the adult opens the limit picker, then 15 and 20 are disabled with a one-line reason, and an install whose stored limit is 20 plays `start` at 10 without changing the stored preference on exit.
+24. **Step ceiling:** Given step `1`, when items generate in every mode, then the added or taken-away number is exactly 1; given `3-5`, it is always 3, 4 or 5; given `any`, the distribution matches today's.
+25. **Orthogonal knobs:** Given any item on screen, when the adult changes mode, then the step is preserved; when the adult changes step, then the mode is preserved; and no transition turns both at once.
+26. **Stored corrupt step:** Given localStorage with `step: "banana"` or a missing field, when the app loads, then step is `any`.
 
 ## 6. Tests to write first, and coverage gates
 
 Tests are written before code in each PR, in the repo's existing layout (Vitest + happy-dom, fake timers for the state machine).
 
 **`test/mathEngine.test.js` (extend)**
-- `generateProblem` returns `{num1, num2, answer, blankField, mode, operator}` for every (mode, operator) pair.
+- `generateProblem` returns `{num1, num2, answer, blankField, mode, operator}` for every (mode, operator, step) pair, and the returned object carries **no** `step` field (it is a generation parameter, logged separately).
 - Mode→blank mapping per §4 table, incl. `part`/− never blanking `num1` and `start` never existing under +.
-- Invariants sweep: 1,000 items per (mode, operator): no zero; limit respected on operands and answer; `num1 > num2` for −; blank value ∈ 1..limit (always keypad-reachable).
+- Invariants sweep: 1,000 items per (mode, operator, step): no zero; limit respected on operands and answer; `num1 > num2` for −; blank value ∈ 1..limit (always keypad-reachable); and the step ceiling holds for `1` / `2` / `3-5` while `any` reproduces today's distribution.
 - `generateProblem('+', limit, 'start')` throws or is uncallable.
 - `evaluateAnswer('')` returns `null`.
 - Generators terminate at limit < 2 (throw, bounded).
@@ -142,6 +151,7 @@ Tests are written before code in each PR, in the repo's existing layout (Vitest 
 - Mode change clears all pending timers (advance, hold, reveal) and generates exactly one item.
 - `putBackUsed` flag recorded both ways.
 - Mode persists through the preferences seam; corrupt stored mode ⇒ `result`.
+- Step persists through the same seam; absent or corrupt step ⇒ `any`; a step change regenerates exactly once and preserves the mode (the mirror of criterion 19).
 
 **`test/usePreferences.test.js` (extend)**
 - Migration: preferences without `mode` load as `result` and save back with `mode` present.
@@ -173,8 +183,8 @@ No threshold may be lowered to land a PR; new files (e.g. a dot-row component) e
 Current storage: one key, `mathGame.preferences`, JSON `{playerName, mascot, maxLimit}` (`usePreferences.js:7`, save at `:65-72`). The mode feature adds `mode` and `countersOn`.
 
 Rules:
-1. **Absent fields default, never throw.** Load path: `mode = ['result','part','start'].includes(prefs.mode) ? prefs.mode : 'result'`; `countersOn = prefs.countersOn === true`. A pre-feature install has neither key and loads exactly as a fresh `result`-mode install.
-2. **Validate on read, not just on write.** The existing NaN-limit defect (audit D3) shows what happens when `Math.min(Math.max(NaN,5),20)` is trusted; the new loader validates `maxLimit` with `Number.isFinite` before clamping, and validates `mode` against the whitelist. Anything invalid falls back to the default *and is rewritten* on the next save, so a corrupt blob self-heals instead of persisting.
+1. **Absent fields default, never throw.** Load path: `mode = ['result','part','start'].includes(prefs.mode) ? prefs.mode : 'result'`; `step = ['1','2','3-5','any'].includes(prefs.step) ? prefs.step : 'any'`; `countersOn = prefs.countersOn === true`. A pre-feature install has none of these keys and loads exactly as a fresh `result` / `any` install.
+2. **Validate on read, not just on write.** The existing NaN-limit defect (audit D3) shows what happens when `Math.min(Math.max(NaN,5),20)` is trusted; the new loader validates `maxLimit` with `Number.isFinite` before clamping, and validates `mode` and `step` against their whitelists. Anything invalid falls back to the default *and is rewritten* on the next save, so a corrupt blob self-heals instead of persisting.
 3. **No version field yet.** Two added optional keys do not justify a schema version. If a third preference family ever lands, add `v: 2` then; the loader already tolerates its absence.
 4. **Corrupt JSON stays handled.** The existing `try/catch` around `JSON.parse` remains the last line; defaults apply.
 5. **Key name unchanged.** No new storage key, no migration of the old one, nothing removed — `playerName`, `mascot`, `maxLimit` keep their meanings, so no install can lose a name or mascot to this feature.

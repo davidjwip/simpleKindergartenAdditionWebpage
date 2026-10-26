@@ -132,6 +132,7 @@ the value is in the hand, not the screen.
 | Quarters, thirds, equivalence | Y2, G1/G2, HK 3N5 | same engine, later tier | app | later |
 | Position words in a picture | 1S3 | picture, tap the object described | app | build (small tier) |
 | Drawing/making shapes, measuring with a real ruler | 1S2, 1M3 | — | physical | no |
+| **Write the numerals 0–20** | KG 5–6, 1N1 | — | paper | **no — pencil.** Formation and motor practice need a hand, and the KG guide forbids "mechanical copying" in the app's genre. Falsifier: if a term of paper practice has not moved it, revisit a stroke-tracing page as its own small app |
 | Pictograms | 2D1 (P2) | data of shapes, count | app | later, cheap |
 
 ---
@@ -145,12 +146,14 @@ Four units of organisation, in the order they earn their place:
 | 1 | **Maths drill** (`maths.zt489.com`) | equations | 1N2, then 1N1 composition as a mode | exists; 8-increment plan in flight (`specs/improvement-plan.md`) |
 | 2 | **Shape & halving** (new) | shape & space | 1S1, 1S2, halves → quarters, 1S3 position, KG shape milestones | **next build** |
 | 3 | **Clock** (`clock.zt489.com`) | time | 1M4 time-telling + calendar tier | exists |
-| 4 | **Money** (new, later) | measure | 1M2 coins and price tags ≤ $10, later 2N5 change | deferred |
+| 4 | **Number sense** (new tier, or app 5 if the drill will not stretch) | counting | count backward 10 → 20; count in 2s, 5s, 10s on a line and a 10×10 square; teen numerals as one ten and some ones; compare and order ≤ 20 (1N1, 1N3) | after the drill's eight increments, **before money** |
+| 5 | **Money** (new, later) | measure | 1M2 coins and price tags ≤ $10, later 2N5 change | deferred |
 
-Deliberately not a fifth app: counting, comparing, odd/even and tens/units all belong to the number
-strand and share one interaction grammar (show objects, tap a numeral or a choice). They are the next
-tier of app 1 if it stretches to a topic menu, or app 5 if it does not — decided after the halving POC
-is in a child's hands, not before.
+The counting tier is a shell question, not a content one: counting, comparing, odd/even, teen numerals
+and tens/units all belong to the number strand and share one interaction grammar (show objects, tap a
+numeral or a choice). They are the next tier of app 1 if it stretches to a topic menu, or app 5 if it
+does not — decided after the halving POC is in a child's hands, not before. What is decided already is
+the ordering: the counting tier comes **before** money, because it is P1 number content and money is not.
 
 **Why shape and halving is a separate app rather than a mode of the drill:**
 
@@ -183,6 +186,7 @@ numerals like 1/2.
 | H2 Equal vs unequal | Two pieces of the *same* shape — are the two parts the same size? | app | **this is the rung that teaches.** The non-example is the lesson |
 | H3 Is this half? | One shape, one cut: does this show half? (vertical, horizontal, diagonal, and equal parts of a different shape) | app | the user's ask, as a discrimination |
 | H4 Find the half | Four pictures of the same shape; tap the one showing half | app | production under choice; position must be shuffled |
+| H4b Choose the line | Three candidate lines on one shape — one equal-area, one clearly unequal, one near-miss; tap the one that cuts it in half | app | separating judgement from the wrist; **deferred past the POC** — recorded so it is not rebuilt from scratch later |
 | H5 Draw the cut | Tap the two ends of the line that cuts the shape into two equal pieces | app | **the school task** (Year 1 / Grade 1 wording: "draw a line to cut the shape into half"); judged on equal *area*, not symmetry — see the note below |
 | H6 Half of a quantity | Share 6 sweets between 2 plates, both the same | app | discrete halves; the bridge to 1N1 composition |
 | H7 Quarters | Cut in half twice; four equal parts | app | later, but closer than it looks: Year 1 and CCSS Grade 1 both include quarters — only thirds and equivalence wait for Year 2 / Grade 2 |
@@ -201,10 +205,17 @@ Traps this ladder exists to avoid, each of which a naive "half" page gets wrong:
    milestone is the piece; keep sweets for H6.
 - **A cut is not a drag.** Tap the region or tap the line; dragging a knife measures the wrist, not the
   concept.
+- **No item is asked before a split has been seen.** The assessment's halves failure was comprehension,
+  not judgement — nothing resembling a dividing line was drawn. So the first screen *demonstrates*: a
+  shape splits along a line, the two pieces separate, no question. Every later item replays that split
+  in its reveal.
 - **"Half" is equal area, not a line of symmetry.** A rectangle has infinitely many halving lines and a
   square includes the diagonals; an app that judges "the" symmetry line marks correct cuts wrong. The
   judge needs an area test (within tolerance) on the regions the cut creates. The cartoon-head item is
   the opposite case: a symmetry task wearing a halves label.
+- **One geometry function drives both the animation and the verdict.** The split the child watches and
+  the split that is scored come from the same pure module; two paths would sooner or later disagree, and
+  the child would be shown a correct-looking cut that was marked wrong.
 
 ---
 
@@ -213,13 +224,16 @@ Traps this ladder exists to avoid, each of which a naive "half" page gets wrong:
 1. **Finish the drill plan** as written (`docs/specs/improvement-plan.md`) — nothing here changes it;
    I1 is independent of the shape work. Its only scope addition, later, is a composition/bonds mode
    (1N1) because that is the documented prerequisite of the arithmetic it already teaches.
-2. **Build the shape & halving app as a POC with H2 + H3 only** — two screens, one shape family
-   (circle, square, rectangle), one playable level with audio, on a real URL, in a child's hands. Not a
-   ladder, not a gate. Watch him: whether "same size" is a phrase he can act on, whether the unequal
-   non-example teaches or confuses, and whether he wants to cut or to choose.
-3. **Then** the rest of the shape strand (H4–H7, 1S1 3-D, 1S2 composition, 1S3 position), decided from
-   what he did.
-4. **Money last** — it is the most fun and the most asset-heavy (coin images at true relative size), and
+2. **Build the shape & halving app as a POC with three screens** — the split demonstration, then H2
+   (same size?) and H3 (is this half?) — one shape family (circle, square, rectangle), one playable level
+   with audio, on a real URL, in a child's hands. Not a ladder, not a gate. Watch him: whether "same
+   size" is a phrase he can act on, whether the unequal non-example teaches or confuses, and whether he
+   wants to cut or to choose.
+3. **Then** the rest of the shape strand (H4, H4b, H5–H7, 1S1 3-D, 1S2 composition, 1S3 position),
+   decided from what he did.
+4. **The counting tier** (backward 10 → 20, 2s/5s/10s, teen numerals, compare/order ≤ 20) — P1 1N1/1N3
+   content, cheap and visual, and it comes before money.
+5. **Money last** — it is the most fun and the most asset-heavy (coin images at true relative size), and
    nothing else depends on it.
 
 ## 6. Open question
