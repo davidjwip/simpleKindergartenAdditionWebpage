@@ -121,6 +121,49 @@ Each increment is one PR: tests written first, then code; acceptance criteria as
 
 **Closes audit defects:** none. It is change R1 from `revision-assessment-2026-10.md`.
 
+### Increment 3c — Anchor facts: "Make 5", "Make 10", doubles
+
+**Purpose.** Drill the structure of five and ten — the fact strategy the rest is derived from — as its
+own content mode. Full spec: **`anchor-facts.md`**.
+
+**What changes.** A new content mode `anchor` with three families (`bonds` total 10 first, then `bonds`
+total 5 and `doubles`), each rendered on a five- or ten-frame with the known part filled and the unknown
+part left as outlined empty cells. One numeral tap submits; the I1 hold→retry→reveal machinery and the
+I4 part-whole bar are untouched.
+
+Anchor mode must not read `maxLimit` for its keypad — the keypad is `v-for="n in maxLimit"` today
+(`App.vue:269`), grid included (`:267`), so the mode computes an **effective** keypad length from the
+family total, leaves the stored preference alone, and restores it on exit. `limit` and `step` changes
+made while anchor is active are inert on screen and take effect only on return to a mode that uses them.
+Mode or family changes mid-pass regenerate item, keypad and track atomically with timers cleared once.
+
+The adult summary carries a mode-specific line: **"first-try here means the frame was read, not that the
+bond is recalled — recall shows up as fast answers."** Without it, 100% first-try at make-ten reads as
+mastery, which is the R2 misreading in a new costume.
+
+**The one convention it breaks, deliberately.** Every other mode's round is "ten right answers". An
+anchor round is **a pass of the family** — 9 items for make-ten, two consecutive passes of 4 for
+make-five, 5 for doubles — because those are the distinct-item counts and a ten-answer round drawn from
+four items is a drill in sequence memory. Make-five runs two passes rather than one so the celebration
+does not fire every four taps; the overlay itself is identical across families. The progress track must
+render the round's own length rather than ten fixed cells.
+
+**Why here.** It is the prerequisite of the step axis: step 3–5 is only derivable once 5 and 10 are
+secure, otherwise it is counting on a bigger number. It needs only the item shape (I3) and the retry
+machinery (I1), so it can land before the operand-blank modes without coupling to them.
+
+**Tests first.** Named in `anchor-facts.md` §6, including a seedable `makeRng` so pass order is
+assertable, and a new `test/anchorEngine.test.js`.
+
+**Acceptance criteria.** The twelve in `anchor-facts.md` §5.
+
+**Risk / rollback.** Moderate: a new renderer (the frame), the first pass-based round goal, and the
+first mode whose keypad length is not the stored limit. Mitigate by shipping **make-ten only** in this
+increment (criteria 1–10 of `anchor-facts.md`) and adding make-five and doubles as 3c-2 behind the same
+mode id. Rollback: hide the mode; nothing else depends on it.
+
+**Closes audit defects:** none.
+
 ### Increment 4 — Mode: "Find the missing part" (`a + ? = c`, `? + b = c`, `a − ? = c`)
 
 **Purpose.** The composition skill every cited curriculum puts first — "5 is 2 and 3" — practised as a task instead of as a random blank. Full spec: **unknown-position.md**.
