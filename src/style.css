@@ -144,6 +144,26 @@ main {
     border: 2px dashed #2f9e94;
 }
 
+.dot.taken {
+    opacity: 0.55;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.taken-away {
+    display: flex;
+    gap: 6px;
+    padding: 0;
+    border: none;
+    background: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.taken-away:hover .dot.taken {
+    opacity: 0.9;
+    transform: scale(1.08);
+}
+
 .anchor-summary {
     margin-top: 10px;
     color: #555;
@@ -475,6 +495,21 @@ main {
     justify-content: center;
 }
 
+.mode-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    max-width: 180px;
+}
+
+.mode-hint {
+    color: #666;
+    font-size: 0.75rem;
+    line-height: 1.2;
+    text-align: center;
+}
+
 .mode-btn {
     min-width: 55px;
     padding: 10px 14px;
@@ -601,6 +636,22 @@ main {
 
 .limit-preset-btn:active {
     transform: scale(0.95);
+}
+
+.limit-preset-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.limit-preset-btn:disabled:hover {
+    background-color: #fff;
+    transform: none;
+}
+
+.limit-cap-note {
+    margin-bottom: 15px;
+    color: #555;
+    font-size: 0.85rem;
 }
 
 .limit-actions {
