@@ -131,7 +131,8 @@ describe('App.vue', () => {
         expect(headerBtns.length).toBe(6); // How to Use, +, −, Limit, Mute, Settings
         const settingsBtn = headerBtns[headerBtns.length - 1];
         expect(settingsBtn.exists()).toBe(true);
-        expect(settingsBtn.text()).toBe('👤');
+        // The owner asked for the word, not the person icon: the panel is where tasks are set.
+        expect(settingsBtn.text()).toBe('Options');
         wrapper.unmount();
     });
 
@@ -189,12 +190,10 @@ describe('App.vue', () => {
         
         await catBtn.trigger('click'); // select cat
         
-        // The panel should now be closed (because selectMascot closes it)
+        // Picking a mascot no longer dismisses the panel: Options holds task, step and counters too,
+        // so closing on a mascot tap sent the adult back to the game mid-setup.
         await wrapper.vm.$nextTick();
-        expect(wrapper.find('.settings-panel').exists()).toBe(false);
-        
-        // Verify that the mascot was set by checking that the panel was closed
-        // and that the mascot ref was updated
+        expect(wrapper.find('.settings-panel').exists()).toBe(true);
         expect(wrapper.vm.mascot).toBe(catEmoji);
         wrapper.unmount();
     });
@@ -441,6 +440,114 @@ describe('App.vue', () => {
         // Verify progress reset after timeout
         await new Promise(resolve => setTimeout(resolve, 600));
         expect(vm.problemsSolved).toBe(0);
+        wrapper.unmount();
+    });
+});
+describe('adult panels dismiss themselves', () => {
+    it('closes the Options panel on a pointer-down outside it', async () => {
+        const wrapper = mount(App);
+        await wrapper.find('.options-btn').trigger('click');
+        expect(wrapper.find('.settings-panel').exists()).toBe(true);
+
+        document.dispatchEvent(new Event('pointerdown'));
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.find('.settings-panel').exists()).toBe(false);
+        wrapper.unmount();
+    });
+
+    it('keeps the Options panel open when the pointer-down is inside it', async () => {
+        const wrapper = mount(App);
+        await wrapper.find('.options-btn').trigger('click');
+
+        wrapper.find('.settings-panel').element.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.find('.settings-panel').exists()).toBe(true);
+        wrapper.unmount();
+    });
+
+    it('closes the limit popup on a pointer-down outside it', async () => {
+        const wrapper = mount(App);
+        const limitButton = wrapper.findAll('button').find((b) => b.text().includes('Limit'));
+        await limitButton.trigger('click');
+        expect(wrapper.find('.limit-popup').exists()).toBe(true);
+
+        document.dispatchEvent(new Event('pointerdown'));
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.find('.limit-popup').exists()).toBe(false);
+        wrapper.unmount();
+    });
+
+    it('closes both panels on Escape and ignores other keys', async () => {
+        const wrapper = mount(App);
+        await wrapper.find('.options-btn').trigger('click');
+        const limitButton = wrapper.findAll('button').find((b) => b.text().includes('Limit'));
+        await limitButton.trigger('click');
+        expect(wrapper.find('.settings-panel').exists()).toBe(true);
+        expect(wrapper.find('.limit-popup').exists()).toBe(true);
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('.settings-panel').exists()).toBe(true);
+        expect(wrapper.find('.limit-popup').exists()).toBe(true);
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('.settings-panel').exists()).toBe(false);
+        expect(wrapper.find('.limit-popup').exists()).toBe(false);
+        wrapper.unmount();
+    });
+
+    it('does not close a panel when the pointer-down is on the button that opens it', async () => {
+        const wrapper = mount(App);
+        await wrapper.find('.options-btn').trigger('click');
+
+        // A pointer-down on the toggle must be ignored by the document listener, otherwise the
+        // click that follows re-opens what the pointerdown just closed.
+        wrapper.find('.options-btn').element.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('.settings-panel').exists()).toBe(true);
+
+        const limitButton = wrapper.findAll('button').find((b) => b.text().includes('Limit'));
+        await limitButton.trigger('click');
+        limitButton.element.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('.limit-popup').exists()).toBe(true);
+        wrapper.unmount();
+    });
+
+    it('toggles the limit popup shut when its own button is pressed again', async () => {
+        const wrapper = mount(App);
+        const limitButton = wrapper.findAll('button').find((b) => b.text().includes('Limit'));
+
+        await limitButton.trigger('click');
+        expect(wrapper.find('.limit-popup').exists()).toBe(true);
+
+        await limitButton.trigger('click');
+        expect(wrapper.find('.limit-popup').exists()).toBe(false);
+        wrapper.unmount();
+    });
+
+    it('names every task the picker offers in the how-to-use text', async () => {
+        const wrapper = mount(App);
+        await wrapper.find('.options-btn').trigger('click');
+        const labels = wrapper.findAll('.mode-btn').map((b) => b.text());
+        expect(labels.length).toBeGreaterThan(0);
+        await wrapper.find('.options-btn').trigger('click');
+
+        const howTo = wrapper.findAll('button').find((b) => b.text() === 'How to Use');
+        await howTo.trigger('click');
+        const text = wrapper.find('.instructions-panel').text();
+
+        // The copy is the thing the owner asked to be honest, so it is pinned to the picker: adding a
+        // task without documenting it fails here.
+        for (const label of labels) {
+            expect(text).toContain(label);
+        }
+        expect(text.toLowerCase()).toContain('one more try');
+        expect(text.toLowerCase()).toMatch(/ten correct answers|one pass/);
         wrapper.unmount();
     });
 });
