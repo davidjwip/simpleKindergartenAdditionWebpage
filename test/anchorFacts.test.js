@@ -148,9 +148,14 @@ describe('useMathGame anchor mode', () => {
         expect(game.problemsSolved.value).toBe(13);
         expect(game.roundProgress.value).toBe(9);
 
+        // The timer alone does not start a new round; closing the celebration
+        // (or resetProgress) is what clears the completed counter.
         vi.advanceTimersByTime(AUTO_ADVANCE);
-        expect(game.roundProgress.value).toBe(0);
+        expect(game.roundProgress.value).toBe(9);
         expect(game.roundLength.value).toBe(9);
+
+        game.resetProgress();
+        expect(game.roundProgress.value).toBe(0);
     });
 
     it('ignores the step setting and still covers 1..9 as the other operand', () => {
@@ -230,7 +235,7 @@ describe('useMathGame anchor mode', () => {
 
         expect(game.anchorTotal.value).toBe(5);
         expect(game.keypadLength.value).toBe(5);
-        expect(game.roundLength.value).toBe(4);
+        expect(game.roundLength.value).toBe(8);
         expect(generations).toBe(1);
 
         game.setAnchorTotal(10);
@@ -255,7 +260,7 @@ describe('useMathGame anchor mode', () => {
         expect(generations).toBe(1);
         expect(vi.getTimerCount()).toBe(0);
         expect(game.anchorTotal.value).toBe(5);
-        expect(game.roundLength.value).toBe(4);
+        expect(game.roundLength.value).toBe(8);
     });
 
     it('does not serve the last bond again as the first bond of the next pass', () => {
@@ -390,12 +395,11 @@ describe('App anchor mode', () => {
         }
     });
 
-    it('does not credit or celebrate a pass made entirely of missed anchors', async () => {
+    it('advances the round on every missed anchor and celebrates at the boundary', async () => {
         vi.useFakeTimers();
         try {
             const wrapper = await mountApp({ mode: 'anchor' });
             const roundLength = wrapper.vm.roundLength;
-            let peakProgress = 0;
 
             for (let i = 0; i < roundLength; i++) {
                 const correct = correctValueFromApp(wrapper);
@@ -408,17 +412,24 @@ describe('App anchor mode', () => {
                 await wrapper.vm.$nextTick();
 
                 expect(wrapper.vm.isRevealing).toBe(true);
-                peakProgress = Math.max(peakProgress, wrapper.vm.roundProgress);
-                expect(wrapper.vm.celebrationVisible).toBe(false);
+                expect(wrapper.vm.roundProgress).toBe(i + 1);
 
-                vi.advanceTimersByTime(REVEAL_DELAY);
-                await wrapper.vm.$nextTick();
+                if (i < roundLength - 1) {
+                    expect(wrapper.vm.celebrationVisible).toBe(false);
+                    vi.advanceTimersByTime(REVEAL_DELAY);
+                    await wrapper.vm.$nextTick();
+                }
             }
 
-            expect(peakProgress).toBeLessThan(roundLength);
-            expect(wrapper.vm.roundProgress).toBe(0);
-            expect(wrapper.vm.celebrationVisible).toBe(false);
-            expect(wrapper.find('.celebration-overlay').classes('visible')).toBe(false);
+            expect(wrapper.vm.roundProgress).toBe(roundLength);
+            expect(wrapper.vm.celebrationVisible).toBe(true);
+            expect(wrapper.find('.celebration-overlay').classes('visible')).toBe(true);
+            expect(vi.getTimerCount()).toBe(0);
+
+            const revealed = problemInputs(wrapper).map((input) => input.element.value);
+            vi.advanceTimersByTime(REVEAL_DELAY);
+            await wrapper.vm.$nextTick();
+            expect(problemInputs(wrapper).map((input) => input.element.value)).toEqual(revealed);
 
             wrapper.unmount();
         } finally {

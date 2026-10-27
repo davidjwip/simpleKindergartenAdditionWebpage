@@ -17,6 +17,8 @@ const DEFAULT_MODE = 'result';
 const DEFAULT_STEP = 'any';
 const ANCHOR_MODE = 'anchor';
 const DEFAULT_ANCHOR_TOTAL = 10;
+const DEFAULT_ANCHOR_KIND = 'bond';
+const MODES = ['result', 'part', 'start', ANCHOR_MODE];
 const ORDINARY_ROUND_LENGTH = 10;
 const START_LIMIT_CAP = 10;
 
@@ -46,6 +48,8 @@ export function useMathGame() {
     const mode = ref(DEFAULT_MODE);
     const step = ref(DEFAULT_STEP);
     const anchorTotal = ref(DEFAULT_ANCHOR_TOTAL);
+    const anchorKind = ref(DEFAULT_ANCHOR_KIND);
+    const frameTotal = ref(DEFAULT_ANCHOR_TOTAL);
 
     // Progress state
     const problemsSolved = ref(0);
@@ -100,12 +104,23 @@ export function useMathGame() {
         isStart.value ? Math.min(maxLimit.value, START_LIMIT_CAP) : maxLimit.value
     ));
 
+    const anchorFamily = computed(() => {
+        if (anchorKind.value === 'doubles') return 'doubles';
+        return anchorTotal.value === 5 ? 'make-five' : 'make-ten';
+    });
+
+    const frameKind = computed(() => (
+        isAnchor.value && anchorKind.value === 'doubles' ? 'doubles' : 'bond'
+    ));
+
     const keypadLength = computed(() => (
-        isAnchor.value ? anchorTotal.value : effectiveMaxLimit.value
+        isAnchor.value
+            ? (anchorKind.value === 'doubles' ? 10 : anchorTotal.value)
+            : effectiveMaxLimit.value
     ));
 
     const roundLength = computed(() => (
-        isAnchor.value ? roundLengthForTotal(anchorTotal.value) : ORDINARY_ROUND_LENGTH
+        isAnchor.value ? roundLengthForTotal(anchorFamily.value) : ORDINARY_ROUND_LENGTH
     ));
 
     const roundProgress = computed(() => {
@@ -201,14 +216,13 @@ export function useMathGame() {
 
     const startAnchorPass = () => {
         if (!anchorRng) anchorRng = makeRng(Date.now());
-        anchorPass = buildPass(anchorTotal.value, anchorRng);
+        anchorPass = buildPass(anchorFamily.value, anchorRng);
         anchorPassIndex = 0;
     };
 
     const nextAnchorProblem = () => {
         if (anchorPassIndex >= anchorPass.length) {
             startAnchorPass();
-            anchorRoundProgress.value = 0;
             if (lastProblem !== null && anchorPass.length > 1 &&
                 anchorPass[0].num1 === lastProblem.num1 &&
                 anchorPass[0].num2 === lastProblem.num2 &&
@@ -219,7 +233,7 @@ export function useMathGame() {
         return anchorPass[anchorPassIndex++];
     };
 
-    const completeAnchorItem = () => {
+    const finishAnchorItem = () => {
         if (!isAnchor.value) return;
         if (anchorRoundProgress.value < roundLength.value) {
             anchorRoundProgress.value++;
@@ -260,7 +274,12 @@ export function useMathGame() {
                 : `${currentSolution.num1} take away ${currentSolution.num2} makes ${currentSolution.answer}`;
         }
         logItem('missed', false);
+        if (isAnchor.value) {
+            finishAnchorItem();
+            updateProgress();
+        }
         clearTimer();
+        if (isAnchor.value && roundProgress.value >= roundLength.value) return;
         touchpadTimer = setTimeout(() => {
             touchpadTimer = null;
             generateNewProblem();
@@ -298,6 +317,7 @@ export function useMathGame() {
             problem = nextAnchorProblem();
             currentAnchorKind = problem.kind;
             currentAnchorTotal = problem.answer;
+            frameTotal.value = problem.answer;
             currentProblem = {
                 num1: problem.num1,
                 num2: problem.num2,
@@ -405,7 +425,7 @@ export function useMathGame() {
             feedback.value = CORRECT_MESSAGES[problemsSolved.value % CORRECT_MESSAGES.length];
             problemsSolved.value++;
             if (!wasRetry) totalProblems.value++;
-            completeAnchorItem();
+            finishAnchorItem();
             
             // Update streak and the persisted daily progress.
             streak.value++;
@@ -416,7 +436,11 @@ export function useMathGame() {
             updateProgress();
             isLocked.value = true;
             phase = 'CORRECT';
-            startTimer();
+            // Symmetric with the reveal path: when that answer completed the anchor round, the
+            // celebration is up and no advance may be scheduled behind it.
+            if (!(isAnchor.value && roundProgress.value >= roundLength.value)) {
+                startTimer();
+            }
         } else {
             feedbackColor.value = '#ff6b6b';
             // Use rotating encouragement message
@@ -458,14 +482,42 @@ export function useMathGame() {
         if (!isAnchor.value) generateNewProblem();
     }
 
-    function setMode(nextMode) {
-        if (mode.value !== nextMode) {
-            resetAnchorPass();
-        }
-        if (nextMode === 'start' && operator.value === '+') {
+    function setModeOption({
+        mode: nextMode = mode.value,
+        anchorTotal: nextTotal = anchorTotal.value,
+        anchorKind: nextKind = anchorKind.value
+    } = {}) {
+        const numeric = Number(nextTotal);
+        const resolvedMode = MODES.includes(nextMode) ? nextMode : DEFAULT_MODE;
+        const resolvedTotal = [5, 10].includes(numeric) ? numeric : DEFAULT_ANCHOR_TOTAL;
+        const resolvedKind = nextKind === 'doubles' ? 'doubles' : DEFAULT_ANCHOR_KIND;
+        const previousOperator = operator.value;
+        if (resolvedMode === 'start' && operator.value === '+') {
             operator.value = '-';
         }
-        mode.value = nextMode;
+        const changed = mode.value !== resolvedMode ||
+            anchorTotal.value !== resolvedTotal ||
+            anchorKind.value !== resolvedKind ||
+            previousOperator !== operator.value;
+
+        mode.value = resolvedMode;
+        anchorTotal.value = resolvedTotal;
+        anchorKind.value = resolvedKind;
+        if (changed) {
+            resetAnchorPass();
+            generateNewProblem();
+        }
+    }
+
+    function setMode(nextMode) {
+        const resolvedMode = MODES.includes(nextMode) ? nextMode : DEFAULT_MODE;
+        if (mode.value !== resolvedMode) {
+            resetAnchorPass();
+        }
+        if (resolvedMode === 'start' && operator.value === '+') {
+            operator.value = '-';
+        }
+        mode.value = resolvedMode;
         generateNewProblem();
     }
 
@@ -478,12 +530,23 @@ export function useMathGame() {
     function setAnchorTotal(total) {
         const numeric = Number(total);
         const nextTotal = [5, 10].includes(numeric) ? numeric : DEFAULT_ANCHOR_TOTAL;
-        const changed = anchorTotal.value !== nextTotal;
-        anchorTotal.value = nextTotal;
-        if (isAnchor.value && changed) {
-            resetAnchorPass();
-            generateNewProblem();
+        if (isAnchor.value) {
+            setModeOption({ mode: mode.value, anchorTotal: nextTotal, anchorKind: 'bond' });
+            return;
         }
+        anchorTotal.value = nextTotal;
+        anchorKind.value = 'bond';
+    }
+
+    function setAnchorKind(kind) {
+        const nextKind = kind === 'doubles' ? 'doubles' : DEFAULT_ANCHOR_KIND;
+        const nextTotal = nextKind === 'doubles' ? 10 : anchorTotal.value;
+        if (isAnchor.value) {
+            setModeOption({ mode: mode.value, anchorTotal: nextTotal, anchorKind: nextKind });
+            return;
+        }
+        anchorKind.value = nextKind;
+        anchorTotal.value = nextTotal;
     }
 
     function resetProgress() {
@@ -521,6 +584,10 @@ export function useMathGame() {
         mode,
         step,
         anchorTotal,
+        anchorKind,
+        anchorFamily,
+        frameKind,
+        frameTotal,
         keypadLength,
         roundLength,
         roundProgress,
@@ -548,6 +615,8 @@ export function useMathGame() {
         setMode,
         setStep,
         setAnchorTotal,
+        setAnchorKind,
+        setModeOption,
         resetProgress,
         setProgressCallback,
         cancelPendingAdvance

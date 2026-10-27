@@ -37,6 +37,20 @@ const filledCount = computed(() => {
     const shown = props.revealed ? props.total : props.filled;
     return Math.max(0, Math.min(shown, props.total));
 });
+
+function cellClasses(cell) {
+    const isFilled = cell <= filledCount.value;
+    const classes = {
+        filled: isFilled,
+        empty: !isFilled
+    };
+    // Group colours mark the two addends, so they only ever apply to a filled cell: an empty cell
+    // must stay outlined, and .group-a/.group-b are declared after .empty in style.css.
+    if (props.kind === 'doubles' && isFilled) {
+        classes[cell <= props.total / 2 ? 'group-a' : 'group-b'] = true;
+    }
+    return classes;
+}
 </script>
 
 <template>
@@ -50,7 +64,7 @@ const filledCount = computed(() => {
                 v-for="cell in row"
                 :key="cell"
                 class="frame-cell"
-                :class="{ filled: cell <= filledCount, empty: cell > filledCount }"
+                :class="cellClasses(cell)"
             ></span>
         </div>
     </div>

@@ -19,6 +19,8 @@ const {
     mode,
     step,
     anchorTotal,
+    frameKind,
+    frameTotal,
     keypadLength,
     roundLength,
     roundProgress,
@@ -43,9 +45,8 @@ const {
     putBack,
     setOperator,
     setMaxLimit: setGameMaxLimit,
-    setMode: setGameMode,
     setStep: setGameStep,
-    setAnchorTotal: setGameAnchorTotal,
+    setModeOption: setGameModeOption,
     resetProgress,
     setProgressCallback,
     cancelPendingAdvance
@@ -63,23 +64,42 @@ watch(lastResult, (newVal) => {
 });
 
 // Preferences for personalization
-const { playerName, mascot, maxLimit: prefsMaxLimit, mode: prefsMode, step: prefsStep, anchorTotal: prefsAnchorTotal, countersOn, setPlayerName, setMascot, setMaxLimit: setPrefsMaxLimit, setMode: setPrefsMode, setStep: setPrefsStep, setAnchorTotal: setPrefsAnchorTotal, setCountersOn, MASCOTS } = usePreferences();
+const { playerName, mascot, maxLimit: prefsMaxLimit, mode: prefsMode, step: prefsStep, anchorTotal: prefsAnchorTotal, anchorKind: prefsAnchorKind, countersOn, setPlayerName, setMascot, setMaxLimit: setPrefsMaxLimit, setStep: setPrefsStep, setTaskOption: setPrefsTaskOption, setCountersOn, MASCOTS } = usePreferences();
 
 const MODE_OPTIONS = [
-    { id: 'result', label: 'Find the total', hint: '' },
-    { id: 'part', label: 'Find the missing part', hint: 'start with step 1–2' },
-    { id: 'start', label: 'Find what we started with', hint: 'keep step at 1' },
-    { id: 'anchor', label: 'Make 10', hint: '' }
+    { key: 'result', id: 'result', label: 'Find the total', hint: '' },
+    { key: 'part', id: 'part', label: 'Find the missing part', hint: 'start with step 1–2' },
+    { key: 'start', id: 'start', label: 'Find what we started with', hint: 'keep step at 1' },
+    { key: 'make-ten', id: 'anchor', label: 'Make 10', hint: '', anchorTotal: 10, anchorKind: 'bond' },
+    { key: 'make-five', id: 'anchor', label: 'Make 5', hint: '', anchorTotal: 5, anchorKind: 'bond' },
+    { key: 'doubles', id: 'anchor', label: 'Doubles', hint: '', anchorTotal: 10, anchorKind: 'doubles' }
 ];
+
+function isModeSelected(option) {
+    if (prefsMode.value !== option.id) return false;
+    if (option.id !== 'anchor') return true;
+    const kind = option.anchorKind || 'bond';
+    if (kind !== prefsAnchorKind.value) return false;
+    return kind === 'doubles' || option.anchorTotal === prefsAnchorTotal.value;
+}
+
+function selectModeOption(option) {
+    if (option.id === 'anchor' && operator.value === '-') return;
+    const next = { mode: option.id };
+    if (option.id === 'anchor') {
+        next.anchorTotal = option.anchorTotal;
+        next.anchorKind = option.anchorKind || 'bond';
+    }
+    setPrefsTaskOption(next);
+}
 
 // Sync maxLimit between preferences and game
 watch(prefsMaxLimit, (newVal) => {
     setGameMaxLimit(newVal);
 });
 
-// Sync the stored task mode into the game. Result-unknown is the default.
-watch(prefsMode, (newVal) => {
-    setGameMode(newVal);
+watch([prefsMode, prefsAnchorTotal, prefsAnchorKind], ([nextMode, nextTotal, nextKind]) => {
+    setGameModeOption({ mode: nextMode, anchorTotal: nextTotal, anchorKind: nextKind });
 });
 
 // Sync the stored step into the game. Any step is the default.
@@ -87,18 +107,9 @@ watch(prefsStep, (newVal) => {
     setGameStep(newVal);
 });
 
-// Sync the anchor family total into the game.
-watch(prefsAnchorTotal, (newVal) => {
-    setGameAnchorTotal(newVal);
-});
-
 // Initialize game maxLimit from stored pref
 if (prefsMaxLimit.value !== 10) {
     setGameMaxLimit(prefsMaxLimit.value);
-}
-
-if (prefsAnchorTotal.value !== 10) {
-    setGameAnchorTotal(prefsAnchorTotal.value);
 }
 
 // Settings panel state
@@ -310,19 +321,23 @@ function closeCelebration() {
                     <div class="mode-options">
                         <div
                             v-for="option in MODE_OPTIONS"
-                            :key="option.id"
+                            :key="option.key"
                             class="mode-option"
                         >
                             <button
                                 class="mode-btn"
-                                :class="{ selected: prefsMode === option.id }"
-                                @click="setPrefsMode(option.id)"
+                                :class="{ selected: isModeSelected(option) }"
+                                :disabled="option.id === 'anchor' && operator === '-'"
+                                @click="selectModeOption(option)"
                             >
                                 {{ option.label }}
                             </button>
                             <span v-if="option.hint" class="mode-hint">{{ option.hint }}</span>
                         </div>
                     </div>
+                    <p v-if="operator === '-'" class="anchor-advisory">
+                        making 5 and 10 is adding
+                    </p>
                 </div>
                 <div class="mascot-picker">
                     <label>Pick Your Mascot:</label>
@@ -439,8 +454,9 @@ function closeCelebration() {
 
                 <NumberFrame
                     v-if="isAnchor"
-                    :total="anchorTotal"
+                    :total="frameTotal"
                     :filled="frameFilled"
+                    :kind="frameKind"
                     :revealed="isRevealing"
                 />
 
