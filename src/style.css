@@ -358,6 +358,27 @@ main {
 }
 
 /* Settings panel for personalization */
+.options-btn.options-open {
+    background-color: #4ecdc4;
+}
+
+.options-intro {
+    margin: 0 0 12px;
+    font-size: 0.95rem;
+    color: #556;
+}
+
+.instructions-panel ul {
+    margin: 6px 0 12px 18px;
+    padding: 0;
+}
+
+.instructions-panel li {
+    margin-bottom: 10px;
+    line-height: 1.45;
+    font-size: 0.98rem;
+}
+
 .settings-panel {
     background-color: #fff;
     border-radius: 15px;

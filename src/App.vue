@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { useMathGame } from './useMathGame';
 import { useAudioFeedback } from './useAudioFeedback';
 import { usePreferences } from './usePreferences';
@@ -128,7 +128,6 @@ function saveName() {
 // Update mascot
 function selectMascot(m) {
     setMascot(m);
-    showSettings.value = false;
 }
 
 // Operator glyph shown in the equation (use a proper minus sign)
@@ -186,6 +185,41 @@ const showInstructions = ref(false);
 
 // Limit popup state
 const showLimitPopup = ref(false);
+
+// Both panels are adult controls, and a panel that can only be dismissed by its own button is a dead
+// end on a tablet. An outside click or Escape closes them.
+const optionsPanel = ref(null);
+const optionsButton = ref(null);
+const limitPopup = ref(null);
+const limitButton = ref(null);
+
+function onDocumentPointerDown(event) {
+    const target = event.target;
+    if (showSettings.value && optionsPanel.value && !optionsPanel.value.contains(target) &&
+        !(optionsButton.value && optionsButton.value.contains(target))) {
+        showSettings.value = false;
+    }
+    if (showLimitPopup.value && limitPopup.value && !limitPopup.value.contains(target) &&
+        !(limitButton.value && limitButton.value.contains(target))) {
+        showLimitPopup.value = false;
+    }
+}
+
+function onDocumentKeydown(event) {
+    if (event.key !== 'Escape') return;
+    showSettings.value = false;
+    showLimitPopup.value = false;
+}
+
+onMounted(() => {
+    document.addEventListener('pointerdown', onDocumentPointerDown);
+    document.addEventListener('keydown', onDocumentKeydown);
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener('pointerdown', onDocumentPointerDown);
+    document.removeEventListener('keydown', onDocumentKeydown);
+});
 const tempLimit = ref(effectiveMaxLimit.value);
 const limitTouched = ref(false);
 
@@ -197,6 +231,12 @@ const headerOperator = computed({
 
 // Open limit popup
 function openLimitPopup() {
+    // Same gesture as Options: pressing the button again puts the frame away, rather than
+    // re-opening it on top of itself with a reset draft.
+    if (showLimitPopup.value) {
+        showLimitPopup.value = false;
+        return;
+    }
     tempLimit.value = effectiveMaxLimit.value;
     limitTouched.value = false;
     showLimitPopup.value = true;
@@ -270,7 +310,7 @@ function closeCelebration() {
                 <span v-if="playerName">{{ playerName }}, </span>
                 Fun Math for Kids!
             </h1>
-            <p class="instructions">Learn Addition &amp; Subtraction</p>
+            <p class="instructions">Addition, subtraction and number bonds</p>
             <div class="header-actions">
                 <button class="action-btn small" @click="showInstructions = !showInstructions">
                     {{ showInstructions ? 'Close' : 'How to Use' }}
@@ -289,21 +329,27 @@ function closeCelebration() {
                     >−</button>
                 </div>
                 <!-- Limit button -->
-                <button class="action-btn small" @click="openLimitPopup">
+                <button ref="limitButton" class="action-btn small" @click="openLimitPopup">
                     🔢 Limit: {{ effectiveMaxLimit }}
                 </button>
                 <button class="action-btn small mute-btn" @click="toggleMuted" :title="isMuted ? 'Unmute sounds' : 'Mute sounds'">
                     {{ isMuted ? '🔇' : '🔊' }}
                 </button>
-                <button class="action-btn small" @click="showSettings = !showSettings" :title="playerName ? 'Edit profile' : 'Set your name'">
-                    👤
-                </button>
+                <button
+                    ref="optionsButton"
+                    class="action-btn small options-btn"
+                    :class="{ 'options-open': showSettings }"
+                    :aria-expanded="showSettings"
+                    aria-haspopup="dialog"
+                    @click="showSettings = !showSettings"
+                >Options</button>
             </div>
         </header>
 
         <!-- Settings Panel -->
-        <div v-if="showSettings" class="settings-panel">
-            <h3>Your Profile</h3>
+        <div v-if="showSettings" ref="optionsPanel" class="settings-panel" role="dialog" aria-label="Options">
+            <h3>Options</h3>
+            <p class="options-intro">Choose what to practise. The panel closes when you click outside it.</p>
             <div class="settings-content">
                 <div class="name-input">
                     <label for="playerName">Your Name:</label>
@@ -381,7 +427,7 @@ function closeCelebration() {
         </div>
 
         <!-- Limit Popup -->
-        <div class="limit-popup" v-if="showLimitPopup">
+        <div class="limit-popup" v-if="showLimitPopup" ref="limitPopup" role="dialog" aria-label="Number limit">
             <div class="limit-popup-content">
                 <h3>Set Number Limit</h3>
                 <p v-if="mode === 'start'">This game plays with numbers up to 10. A higher limit stays saved for your other tasks.</p>
@@ -423,13 +469,27 @@ function closeCelebration() {
                 class="instructions-panel"
                 style="background-color: #fff; border-radius: 15px; padding: 15px; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);"
             >
-                <h2>How to Use This Math Game</h2>
-                <p><strong>1. Choose an operation:</strong> Use the + or − buttons in the header to select addition or subtraction.</p>
-                <p><strong>2. Set the number limit:</strong> Click the 🔢 Limit button to open a popup and set your number range (5 to 20). The keypad will adjust to fit.</p>
-                <p><strong>3. Solve the problem:</strong> Fill in the missing number in the equation using the number buttons below.</p>
-                <p><strong>4. Check your answer:</strong> The game will automatically check if your answer is correct.</p>
-                <p><strong>5. Track your progress:</strong> See your progress in the progress tracker at the bottom.</p>
-                <p><strong>6. Build your streak:</strong> Get problems right to build a streak! You can also see your best streak.</p>
+                <h2>How to use this maths game</h2>
+                <p><strong>One problem at a time.</strong> Fill the empty box by tapping a number, and the game tells you straight away whether it is right. <strong>+</strong> and <strong>−</strong> switch between adding and taking away.</p>
+                <p><strong>Options</strong> is where the practice is set. Press it, choose, then close it and play:</p>
+                <ul>
+                    <li><strong>Task</strong> — which part of the sum is missing, or which facts to drill:
+                        <em>Find the total</em> (3 + 4 = ?), <em>Find the missing part</em> (3 + ? = 7),
+                        <em>Find what we started with</em> (? − 3 = 4), <em>Make 10</em> (7 + ? = 10),
+                        <em>Make 5</em> and <em>Doubles</em> (4 + 4 = ?).
+                        The last three are adding games, so they only appear with +.</li>
+                    <li><strong>Step size</strong> — how big the number you add or take away is.
+                        <em>1</em> means always +1 or −1; <em>2</em> means +2 or −2; <em>3-5</em> mixes 3, 4 and 5;
+                        <em>Any</em> mixes everything up to the limit. A small step can still be counted on
+                        fingers; a big step has to come from the facts.</li>
+                    <li><strong>Show counters</strong> — draws dots under the numbers so a problem can be counted
+                        instead of remembered. It makes each one easier and slower: leave it on while the child
+                        is counting, turn it off once answers come without counting.</li>
+                    <li><strong>Limit</strong> — the biggest number in play, 5 to 20.</li>
+                    <li><strong>Name and mascot</strong> — kept on this device only, never sent anywhere.</li>
+                </ul>
+                <p><strong>A wrong answer gets one more try.</strong> After a second miss the correct sum is shown so the child can see how it works, then the next problem comes.</p>
+                <p><strong>Progress.</strong> Ten correct answers — or one pass through the facts — fills the track and brings the celebration. Misses never end the game; there is nothing here to fail.</p>
             </div>
 
             <div class="problem-area">
