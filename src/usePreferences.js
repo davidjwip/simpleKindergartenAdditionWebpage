@@ -9,9 +9,11 @@ const STORAGE_KEY = 'mathGame.preferences';
 const DEFAULT_MAX_LIMIT = 10;
 const MIN_LIMIT = 5;
 const MAX_LIMIT = 20;
-const MODES = ['result', 'part', 'start'];
+const MODES = ['result', 'part', 'start', 'anchor'];
 const DEFAULT_MODE = 'result';
 const DEFAULT_STEP = 'any';
+const ANCHOR_TOTALS = [5, 10];
+const DEFAULT_ANCHOR_TOTAL = 10;
 
 // Default mascot for kids
 const DEFAULT_MASCOT = '🦊';
@@ -28,12 +30,18 @@ function clampLimit(value) {
     return Math.min(Math.max(numeric, MIN_LIMIT), MAX_LIMIT);
 }
 
+function normalizeAnchorTotal(value) {
+    const numeric = Number(value);
+    return ANCHOR_TOTALS.includes(numeric) ? numeric : DEFAULT_ANCHOR_TOTAL;
+}
+
 export function usePreferences() {
     const playerName = ref('');
     const mascot = ref(DEFAULT_MASCOT);
     const maxLimit = ref(DEFAULT_MAX_LIMIT);
     const mode = ref(DEFAULT_MODE);
     const step = ref(DEFAULT_STEP);
+    const anchorTotal = ref(DEFAULT_ANCHOR_TOTAL);
 
     // Load preferences from localStorage on mount
     onMounted(() => {
@@ -48,6 +56,7 @@ export function usePreferences() {
                 }
                 mode.value = MODES.includes(prefs.mode) ? prefs.mode : DEFAULT_MODE;
                 step.value = STEPS.includes(prefs.step) ? prefs.step : DEFAULT_STEP;
+                anchorTotal.value = normalizeAnchorTotal(prefs.anchorTotal);
             } catch (e) {
                 // Invalid JSON, use defaults
             }
@@ -85,6 +94,11 @@ export function usePreferences() {
         }
     };
 
+    const setAnchorTotal = (total) => {
+        anchorTotal.value = normalizeAnchorTotal(total);
+        savePreferences();
+    };
+
     const getRandomName = () => {
         return RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
     };
@@ -95,7 +109,8 @@ export function usePreferences() {
             mascot: mascot.value,
             maxLimit: maxLimit.value,
             mode: mode.value,
-            step: step.value
+            step: step.value,
+            anchorTotal: anchorTotal.value
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
     };
@@ -106,11 +121,13 @@ export function usePreferences() {
         maxLimit,
         mode,
         step,
+        anchorTotal,
         setPlayerName,
         setMascot,
         setMaxLimit,
         setMode,
         setStep,
+        setAnchorTotal,
         getRandomName,
         MASCOTS
     };
