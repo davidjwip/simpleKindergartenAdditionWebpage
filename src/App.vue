@@ -24,6 +24,9 @@ const {
     roundProgress,
     streak,
     bestStreak,
+    bestStreakToday,
+    dailySolved,
+    dailyModeCounts,
     lastResult,
     isLocked,
     isRevealing,
@@ -119,6 +122,21 @@ function selectMascot(m) {
 
 // Operator glyph shown in the equation (use a proper minus sign)
 const opSymbol = computed(() => (isAnchor.value || operator.value === '+' ? '+' : '−'));
+
+const DAILY_MODE_LABELS = {
+    result: 'Total',
+    part: 'Missing part',
+    start: 'Started with',
+    anchor: 'Make 10'
+};
+
+const dailyModeSummary = computed(() => (
+    Object.entries(DAILY_MODE_LABELS).map(([id, label]) => ({
+        id,
+        label,
+        count: dailyModeCounts.value[id] || 0
+    }))
+));
 
 const trackRows = computed(() => {
     const rows = [];
@@ -430,19 +448,19 @@ function closeCelebration() {
 
         </main>
 
-        <!-- Streak display (below touchpad, above progress-area, with reserved space to prevent shifting) -->
-        <div class="streak-area" :style="{ visibility: streak > 0 ? 'visible' : 'hidden', opacity: streak > 0 ? 1 : 0, minHeight: '40px' }">
+        <!-- Best-today display: never collapses after a mistake. -->
+        <div class="streak-area" :style="{ visibility: bestStreakToday > 0 ? 'visible' : 'hidden', opacity: bestStreakToday > 0 ? 1 : 0, minHeight: '40px' }">
             <span class="streak-fire">🔥</span>
-            <span class="streak-count">{{ streak }} in a row!</span>
-            <span class="streak-best" v-if="bestStreak > 1">
-                Best: {{ bestStreak }}
+            <span class="streak-count">Best today: {{ bestStreakToday }} in a row!</span>
+            <span class="streak-best" v-if="bestStreak > bestStreakToday">
+                Best ever: {{ bestStreak }}
             </span>
         </div>
 
         <div class="progress-area">
             <h2>Path to the Party! 🎉</h2>
             <div class="goal-track">
-                <div class="mascot" v-if="streak > 0">
+                <div class="mascot">
                     {{ mascot }}
                 </div>
                 <div class="goal-steps-wrapper">
@@ -460,6 +478,21 @@ function closeCelebration() {
                 <span class="solved-count">Solved: {{ problemsSolved }}</span>
                 <span class="tried-count">Tried: {{ totalProblems }}</span>
             </p>
+            <div class="daily-summary">
+                <p class="daily-summary-title">Today at a glance</p>
+                <p class="daily-solved">Solved today: {{ dailySolved }}</p>
+                <div class="daily-modes">
+                    <span
+                        v-for="entry in dailyModeSummary"
+                        :key="entry.id"
+                        class="daily-mode mode-count"
+                        :class="`mode-count-${entry.id}`"
+                    >
+                        {{ entry.label }}: {{ entry.count }}
+                    </span>
+                </div>
+                <p class="best-ever">Best ever: {{ bestStreak }}</p>
+            </div>
             <p v-if="isAnchor" class="anchor-summary">
                 first-try here means the frame was read, not that the bond is recalled — recall shows up as fast answers.
             </p>
