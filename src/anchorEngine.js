@@ -6,14 +6,21 @@
  */
 
 const SUPPORTED_TOTALS = [5, 10];
+const DOUBLES_MAX = 5;
 const NAMED_FAMILIES = {
     'make-five': 5,
     'make-ten': 10,
+    doubles: 10,
     bond5: 5,
     bond10: 10
 };
 
-function totalForFamily(family) {
+function resolvesToDoubles(family) {
+    return family === 'doubles' ||
+        (family !== null && typeof family === 'object' && family.kind === 'doubles');
+}
+
+export function numericTotal(family) {
     let total;
     if (typeof family === 'number') {
         total = family;
@@ -60,28 +67,56 @@ export function makeRng(seed = Date.now()) {
     };
 }
 
-export function roundLengthForTotal(total) {
-    return total === 5 ? 4 : total - 1;
+export function roundLengthForTotal(family) {
+    if (resolvesToDoubles(family)) return DOUBLES_MAX;
+    const total = numericTotal(family);
+    return total === 5 ? 8 : total - 1;
+}
+
+export function trackLengthForTotal(family) {
+    return roundLengthForTotal(family);
 }
 
 export function generateBond(total, blankField, num1, rng = Math.random) {
-    totalForFamily(total);
+    const resolvedTotal = numericTotal(total);
     const chosenNum1 = num1 == null
-        ? Math.floor(rng() * (total - 1)) + 1
+        ? Math.floor(rng() * (resolvedTotal - 1)) + 1
         : num1;
-    const num2 = total - chosenNum1;
+    const num2 = resolvedTotal - chosenNum1;
     return {
         num1: chosenNum1,
         num2,
-        answer: total,
+        answer: resolvedTotal,
         operator: '+',
         blankField: blankField == null ? blankFieldForPair(chosenNum1, num2) : blankField,
         kind: 'bond'
     };
 }
 
+export function generateDoubles(value) {
+    const num = Number(value);
+    if (!Number.isInteger(num) || num < 1 || num > DOUBLES_MAX) {
+        throw new RangeError(`Unknown doubles value: ${value}`);
+    }
+    return {
+        num1: num,
+        num2: num,
+        answer: num * 2,
+        operator: '+',
+        blankField: 'answer',
+        kind: 'doubles'
+    };
+}
+
 export function buildPass(family, rng = Math.random) {
-    const total = totalForFamily(family);
+    // doubles first: {kind: 'doubles'} carries no total, so numericTotal would throw on it
+    if (resolvesToDoubles(family)) {
+        return shuffle(
+            Array.from({ length: DOUBLES_MAX }, (_, index) => generateDoubles(index + 1)),
+            rng
+        );
+    }
+    const total = numericTotal(family);
     return shuffle(pairsFor(total), rng).map(({ num1, num2 }) => (
         generateBond(total, blankFieldForPair(num1, num2), num1, rng)
     ));

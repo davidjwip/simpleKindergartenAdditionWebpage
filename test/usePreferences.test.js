@@ -155,4 +155,44 @@ describe('usePreferences', () => {
         expect(mascot.value).toBe('🦊');
         expect(maxLimit.value).toBe(10);
     });
+
+    it('defaults anchorKind to bond and round-trips doubles', () => {
+        const { anchorKind, setAnchorKind } = usePreferences();
+
+        expect(anchorKind.value).toBe('bond');
+
+        setAnchorKind('doubles');
+        expect(anchorKind.value).toBe('doubles');
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEY)).anchorKind).toBe('doubles');
+
+        setAnchorKind('not-a-kind');
+        expect(anchorKind.value).toBe('bond');
+    });
+
+    it('loads bond when the stored anchorKind is invalid', () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ anchorKind: 'banana' }));
+
+        const { wrapper, state } = mountPreferences();
+
+        expect(state.anchorKind.value).toBe('bond');
+        wrapper.unmount();
+    });
+
+    it('updates mode, total and kind in one setTaskOption call', () => {
+        const { mode, anchorTotal, anchorKind, setTaskOption } = usePreferences();
+
+        setTaskOption({ mode: 'anchor', anchorTotal: 5, anchorKind: 'bond' });
+
+        expect(mode.value).toBe('anchor');
+        expect(anchorTotal.value).toBe(5);
+        expect(anchorKind.value).toBe('bond');
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEY))).toMatchObject({
+            mode: 'anchor',
+            anchorTotal: 5,
+            anchorKind: 'bond'
+        });
+
+        setTaskOption({ mode: 'anchor', anchorTotal: 10, anchorKind: 'doubles' });
+        expect(anchorKind.value).toBe('doubles');
+    });
 });

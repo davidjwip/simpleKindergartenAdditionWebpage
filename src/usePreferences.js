@@ -14,6 +14,8 @@ const DEFAULT_MODE = 'result';
 const DEFAULT_STEP = 'any';
 const ANCHOR_TOTALS = [5, 10];
 const DEFAULT_ANCHOR_TOTAL = 10;
+const ANCHOR_KINDS = ['bond', 'doubles'];
+const DEFAULT_ANCHOR_KIND = 'bond';
 const DEFAULT_COUNTERS_ON = false;
 
 // Default mascot for kids
@@ -36,6 +38,10 @@ function normalizeAnchorTotal(value) {
     return ANCHOR_TOTALS.includes(numeric) ? numeric : DEFAULT_ANCHOR_TOTAL;
 }
 
+function normalizeAnchorKind(value) {
+    return ANCHOR_KINDS.includes(value) ? value : DEFAULT_ANCHOR_KIND;
+}
+
 export function usePreferences() {
     const playerName = ref('');
     const mascot = ref(DEFAULT_MASCOT);
@@ -43,6 +49,7 @@ export function usePreferences() {
     const mode = ref(DEFAULT_MODE);
     const step = ref(DEFAULT_STEP);
     const anchorTotal = ref(DEFAULT_ANCHOR_TOTAL);
+    const anchorKind = ref(DEFAULT_ANCHOR_KIND);
     const countersOn = ref(DEFAULT_COUNTERS_ON);
 
     // Load preferences from localStorage on mount
@@ -59,6 +66,7 @@ export function usePreferences() {
                 mode.value = MODES.includes(prefs.mode) ? prefs.mode : DEFAULT_MODE;
                 step.value = STEPS.includes(prefs.step) ? prefs.step : DEFAULT_STEP;
                 anchorTotal.value = normalizeAnchorTotal(prefs.anchorTotal);
+                anchorKind.value = normalizeAnchorKind(prefs.anchorKind);
                 countersOn.value = prefs.countersOn === true;
             } catch (e) {
                 // Invalid JSON, use defaults
@@ -102,6 +110,25 @@ export function usePreferences() {
         savePreferences();
     };
 
+    const setAnchorKind = (kind) => {
+        anchorKind.value = normalizeAnchorKind(kind);
+        savePreferences();
+    };
+
+    const setTaskOption = ({
+        mode: nextMode = mode.value,
+        anchorTotal: nextAnchorTotal = anchorTotal.value,
+        anchorKind: nextAnchorKind = anchorKind.value
+    } = {}) => {
+        if (MODES.includes(nextMode)) mode.value = nextMode;
+        const kind = normalizeAnchorKind(nextAnchorKind);
+        // doubles is a family of totals (one and one … five and five), so the stored pair must not be
+        // incoherent: {total: 5, kind: 'doubles'} is normalised to total 10.
+        anchorKind.value = kind;
+        anchorTotal.value = kind === 'doubles' ? 10 : normalizeAnchorTotal(nextAnchorTotal);
+        savePreferences();
+    };
+
     const setCountersOn = (enabled) => {
         countersOn.value = enabled === true;
         savePreferences();
@@ -119,6 +146,7 @@ export function usePreferences() {
             mode: mode.value,
             step: step.value,
             anchorTotal: anchorTotal.value,
+            anchorKind: anchorKind.value,
             countersOn: countersOn.value
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
@@ -131,6 +159,7 @@ export function usePreferences() {
         mode,
         step,
         anchorTotal,
+        anchorKind,
         countersOn,
         setPlayerName,
         setMascot,
@@ -138,6 +167,8 @@ export function usePreferences() {
         setMode,
         setStep,
         setAnchorTotal,
+        setAnchorKind,
+        setTaskOption,
         setCountersOn,
         getRandomName,
         MASCOTS

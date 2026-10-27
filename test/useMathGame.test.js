@@ -470,3 +470,25 @@ describe('locked state behavior', () => {
         expect(game.isLocked.value).toBe(false);
     });
 });
+describe('ordinary modes keep their auto-advance at a round boundary', () => {
+    it('still schedules the advance after the tenth correct answer in result mode', () => {
+        game.setMode('result');
+        expect(game.isAnchor.value).toBe(false);
+        // nine answers, letting each advance fire, so the tenth lands on a live round boundary
+        for (let i = 0; i < 9; i++) {
+            game.num1.value = '2';
+            game.num2.value = '3';
+            game.answer.value = '5';
+            game.checkAnswer();
+            vi.advanceTimersByTime(AUTO_ADVANCE);
+        }
+        game.num1.value = '2';
+        game.num2.value = '3';
+        game.answer.value = '5';
+        game.checkAnswer();
+        // the tenth answer completed the round: the anchor-only guard must not swallow the advance
+        // that ordinary modes have always had, so a timer is pending and nothing has fired yet.
+        expect(game.roundProgress.value).toBeGreaterThanOrEqual(game.roundLength.value);
+        expect(vi.getTimerCount()).toBeGreaterThan(0);
+    });
+});

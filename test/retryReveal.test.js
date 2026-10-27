@@ -199,6 +199,22 @@ describe('wrong retry reveal', () => {
         expect(game.itemLog.value.at(-1)).toMatchObject({ outcome: 'missed', firstTry: false });
     });
 
+    it('advances on the normal reveal timer in an ordinary mode', () => {
+        game.setMode('result');
+        game.generateNewProblem();
+        getToReveal();
+
+        expect(game.isRevealing.value).toBe(true);
+        expect(game.problemsSolved.value).toBe(0);
+        expect(vi.getTimerCount()).toBe(1);
+
+        vi.advanceTimersByTime(REVEAL_DELAY);
+
+        expect(game.isRevealing.value).toBe(false);
+        expect(game.problemsSolved.value).toBe(0);
+        expect(fields().filter((value) => value === '')).toHaveLength(1);
+    });
+
     it('ignores a third tap during the reveal', () => {
         game.generateNewProblem();
         getToReveal();
