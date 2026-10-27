@@ -1,6 +1,6 @@
 /**
  * usePreferences.js — Vue composable for user preferences persisted to localStorage.
- * Stores: player name, mascot, number limit, task mode and step size.
+ * Stores: player name, mascot, number limit, task mode, step size and counters.
  */
 import { ref, onMounted } from 'vue';
 import { STEPS } from './mathEngine';
@@ -14,6 +14,7 @@ const DEFAULT_MODE = 'result';
 const DEFAULT_STEP = 'any';
 const ANCHOR_TOTALS = [5, 10];
 const DEFAULT_ANCHOR_TOTAL = 10;
+const DEFAULT_COUNTERS_ON = false;
 
 // Default mascot for kids
 const DEFAULT_MASCOT = '🦊';
@@ -42,6 +43,7 @@ export function usePreferences() {
     const mode = ref(DEFAULT_MODE);
     const step = ref(DEFAULT_STEP);
     const anchorTotal = ref(DEFAULT_ANCHOR_TOTAL);
+    const countersOn = ref(DEFAULT_COUNTERS_ON);
 
     // Load preferences from localStorage on mount
     onMounted(() => {
@@ -57,6 +59,7 @@ export function usePreferences() {
                 mode.value = MODES.includes(prefs.mode) ? prefs.mode : DEFAULT_MODE;
                 step.value = STEPS.includes(prefs.step) ? prefs.step : DEFAULT_STEP;
                 anchorTotal.value = normalizeAnchorTotal(prefs.anchorTotal);
+                countersOn.value = prefs.countersOn === true;
             } catch (e) {
                 // Invalid JSON, use defaults
             }
@@ -99,6 +102,11 @@ export function usePreferences() {
         savePreferences();
     };
 
+    const setCountersOn = (enabled) => {
+        countersOn.value = enabled === true;
+        savePreferences();
+    };
+
     const getRandomName = () => {
         return RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
     };
@@ -110,7 +118,8 @@ export function usePreferences() {
             maxLimit: maxLimit.value,
             mode: mode.value,
             step: step.value,
-            anchorTotal: anchorTotal.value
+            anchorTotal: anchorTotal.value,
+            countersOn: countersOn.value
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
     };
@@ -122,12 +131,14 @@ export function usePreferences() {
         mode,
         step,
         anchorTotal,
+        countersOn,
         setPlayerName,
         setMascot,
         setMaxLimit,
         setMode,
         setStep,
         setAnchorTotal,
+        setCountersOn,
         getRandomName,
         MASCOTS
     };

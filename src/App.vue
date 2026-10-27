@@ -63,7 +63,7 @@ watch(lastResult, (newVal) => {
 });
 
 // Preferences for personalization
-const { playerName, mascot, maxLimit: prefsMaxLimit, mode: prefsMode, step: prefsStep, anchorTotal: prefsAnchorTotal, setPlayerName, setMascot, setMaxLimit: setPrefsMaxLimit, setMode: setPrefsMode, setStep: setPrefsStep, setAnchorTotal: setPrefsAnchorTotal, MASCOTS } = usePreferences();
+const { playerName, mascot, maxLimit: prefsMaxLimit, mode: prefsMode, step: prefsStep, anchorTotal: prefsAnchorTotal, countersOn, setPlayerName, setMascot, setMaxLimit: setPrefsMaxLimit, setMode: setPrefsMode, setStep: setPrefsStep, setAnchorTotal: setPrefsAnchorTotal, setCountersOn, MASCOTS } = usePreferences();
 
 const MODE_OPTIONS = [
     { id: 'result', label: 'Find the total', hint: '' },
@@ -155,6 +155,19 @@ const frameFilled = computed(() => {
     if (blankField.value === 'num1') return Number(num2.value) || 0;
     if (blankField.value === 'num2') return Number(num1.value) || 0;
     return (Number(num1.value) || 0) + (Number(num2.value) || 0);
+});
+
+// Countable rows sit under each visible numeral in the result and part tasks.
+// Start mode already carries its bar, and make-ten carries its frame.
+const numeralCounters = computed(() => {
+    if (!countersOn.value) return [];
+    if (mode.value !== 'result' && mode.value !== 'part') return [];
+
+    return [
+        { field: 'num1', value: Number(num1.value) },
+        { field: 'num2', value: Number(num2.value) },
+        { field: 'answer', value: Number(answer.value) }
+    ].filter((counter) => Number.isFinite(counter.value) && counter.value > 0);
 });
 
 // "How to Use" instructions panel
@@ -339,6 +352,16 @@ function closeCelebration() {
                         </button>
                     </div>
                 </div>
+                <div class="counters-toggle">
+                    <label>
+                        <input
+                            type="checkbox"
+                            :checked="countersOn"
+                            @change="setCountersOn($event.target.checked)"
+                        />
+                        Show counters
+                    </label>
+                </div>
             </div>
         </div>
 
@@ -401,6 +424,17 @@ function closeCelebration() {
                     <input type="text" :value="num2" :class="{ 'reveal-highlight': isRevealing && blankField === 'num2' }" readonly placeholder="?" />
                     <span class="equal-sign">=</span>
                     <input type="text" :value="answer" :class="{ 'reveal-highlight': isRevealing && blankField === 'answer' }" readonly placeholder="?" />
+                </div>
+
+                <div v-if="numeralCounters.length" class="numeral-counters">
+                    <DotRow
+                        v-for="counter in numeralCounters"
+                        :key="counter.field"
+                        class="numeral-counter"
+                        :data-counter-for="counter.field"
+                        :total="counter.value"
+                        :known="counter.value"
+                    />
                 </div>
 
                 <NumberFrame
