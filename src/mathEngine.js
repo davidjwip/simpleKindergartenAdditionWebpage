@@ -42,7 +42,8 @@ export function pickRandomField() {
  * Returns true/false, or null when the input is incomplete/invalid.
  */
 export function evaluateAnswer(val1, val2, answerVal, operator) {
-    if (isNaN(val1) || isNaN(val2) || isNaN(answerVal)) {
+    if ([val1, val2, answerVal].some((value) => value == null || String(value).trim() === '') ||
+        isNaN(val1) || isNaN(val2) || isNaN(answerVal)) {
         return null;
     }
     if (operator === '+') {

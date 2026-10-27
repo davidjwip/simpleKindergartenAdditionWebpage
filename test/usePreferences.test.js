@@ -1,8 +1,22 @@
 // usePreferences.test.js — tests for the preferences composable
 import { describe, it, expect, beforeEach } from 'vitest';
+import { mount } from '@vue/test-utils';
+import { defineComponent, h } from 'vue';
 import { usePreferences } from '../src/usePreferences';
 
 const STORAGE_KEY = 'mathGame.preferences';
+
+function mountPreferences() {
+    const state = {};
+    const Host = defineComponent({
+        setup() {
+            Object.assign(state, usePreferences());
+            return () => h('div');
+        }
+    });
+    const wrapper = mount(Host);
+    return { wrapper, state };
+}
 
 describe('usePreferences', () => {
     beforeEach(() => {
@@ -84,6 +98,32 @@ describe('usePreferences', () => {
         expect(playerName.value).toBe('');
         expect(mascot.value).toBe('🦊');
         expect(maxLimit.value).toBe(10);
+    });
+
+    it('rehydrates stored preferences when the composable mounts', () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            playerName: 'Sample Player',
+            mascot: '🐶',
+            maxLimit: 15
+        }));
+
+        const { wrapper, state } = mountPreferences();
+
+        expect(state.playerName.value).toBe('Sample Player');
+        expect(state.mascot.value).toBe('🐶');
+        expect(state.maxLimit.value).toBe(15);
+        wrapper.unmount();
+    });
+
+    it('falls back to defaults when mounted with unparseable storage', () => {
+        localStorage.setItem(STORAGE_KEY, 'not valid json');
+
+        const { wrapper, state } = mountPreferences();
+
+        expect(state.playerName.value).toBe('');
+        expect(state.mascot.value).toBe('🦊');
+        expect(state.maxLimit.value).toBe(10);
+        wrapper.unmount();
     });
 
     it('handles invalid JSON in localStorage gracefully', () => {

@@ -2,6 +2,7 @@
 // logic, now targeting the reactive composable. Uses Vitest fake timers so the
 // timer crash-regression behaviors are fully testable without a browser.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { effectScope } from 'vue';
 import { useMathGame } from '../src/useMathGame';
 import { evaluateAnswer } from '../src/mathEngine';
 
@@ -108,12 +109,48 @@ it('schedules a regeneration after an incorrect answer', () => {
         expectTripleValid();
     });
 
-    it('clears the pending correct-answer timer when answering again', () => {
+    it('ignores another answer during the correct-answer advance and keeps one timer', () => {
         game.generateNewProblem();
         makeAdd();
         vi.advanceTimersByTime(AUTO_ADVANCE - 100);
-        makeIncorrect(); // should clear the pending auto-advance timer first
-        expect(vi.getTimerCount()).toBe(1); // only the fresh incorrect-retry timer remains
+        makeIncorrect();
+        expect(vi.getTimerCount()).toBe(1);
+        expect(game.problemsSolved.value).toBe(1);
+        expect(game.totalProblems.value).toBe(1);
+
+        vi.advanceTimersByTime(100);
+        expectTripleValid();
+    });
+
+    it('ignores a repeated correct check during the advance window', () => {
+        game.generateNewProblem();
+        makeAdd();
+        makeAdd();
+
+        expect(game.problemsSolved.value).toBe(1);
+        expect(game.totalProblems.value).toBe(1);
+        expect(game.streak.value).toBe(1);
+        expect(vi.getTimerCount()).toBe(1);
+    });
+});
+
+describe('scope disposal', () => {
+    it('clears a pending advance timer when its scope is disposed', () => {
+        const scope = effectScope();
+        const scopedGame = scope.run(() => useMathGame());
+        scopedGame.generateNewProblem();
+        scopedGame.num1.value = '2';
+        scopedGame.num2.value = '3';
+        scopedGame.answer.value = '5';
+        scopedGame.checkAnswer();
+        expect(vi.getTimerCount()).toBe(1);
+
+        scope.stop();
+        expect(vi.getTimerCount()).toBe(0);
+
+        const before = [scopedGame.num1.value, scopedGame.num2.value, scopedGame.answer.value];
+        vi.advanceTimersByTime(AUTO_ADVANCE);
+        expect([scopedGame.num1.value, scopedGame.num2.value, scopedGame.answer.value]).toEqual(before);
     });
 });
 
@@ -121,6 +158,7 @@ describe('progress & reset', () => {
     it('resetProgress clears both counters', () => {
         game.generateNewProblem();
         makeAdd();
+        vi.advanceTimersByTime(AUTO_ADVANCE);
         makeIncorrect();
         expect(game.problemsSolved.value).toBe(1);
         expect(game.totalProblems.value).toBe(2);
@@ -342,8 +380,8 @@ describe('rotating feedback messages', () => {
         
         expect(firstMsg).not.toBe(secondMsg);
         // Encouragement messages should contain these phrases
-        expect(firstMsg).toMatch(/Try again|got this|No worries|Keep going/);
-        expect(secondMsg).toMatch(/Try again|got this|No worries|Keep going/);
+        expect(firstMsg).toMatch(/Look again|got this|No worries|Keep going/);
+        expect(secondMsg).toMatch(/Look again|got this|No worries|Keep going/);
     });
 
     it('resets lastResult when generating a new problem for audio re-arming', () => {

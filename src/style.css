@@ -74,6 +74,11 @@ main {
     color: #333;
 }
 
+.problem input.reveal-highlight {
+    background-color: #4ecdc4;
+    color: #fff;
+}
+
 .operator {
     font-size: 2rem;
     font-weight: bold;
