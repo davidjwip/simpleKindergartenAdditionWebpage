@@ -7,12 +7,22 @@
  */
 import { ref, computed, onScopeDispose, getCurrentScope } from 'vue';
 import { generateProblem, evaluateAnswer, STEPS } from './mathEngine';
+import { buildPass, makeRng, roundLengthForTotal } from './anchorEngine';
 
 const AUTO_ADVANCE_DELAY = 2000;
 const RETRY_HOLD_DELAY = 1500;
 const REVEAL_DELAY = 2500;
 const DEFAULT_MODE = 'result';
 const DEFAULT_STEP = 'any';
+const ANCHOR_MODE = 'anchor';
+const DEFAULT_ANCHOR_TOTAL = 10;
+const ORDINARY_ROUND_LENGTH = 10;
+
+function firstTapBucket(elapsedMs) {
+    if (elapsedMs < 2000) return '<2s';
+    if (elapsedMs <= 5000) return '2-5s';
+    return '>5s';
+}
 
 // Message pools for variety
 const CORRECT_MESSAGES = ['Correct! 🎉', 'Great job! ⭐', 'Awesome! 🌟', 'You did it! 💪', 'Super! 🎈'];
@@ -32,10 +42,12 @@ export function useMathGame() {
     const maxLimit = ref(10);
     const mode = ref(DEFAULT_MODE);
     const step = ref(DEFAULT_STEP);
+    const anchorTotal = ref(DEFAULT_ANCHOR_TOTAL);
 
     // Progress state
     const problemsSolved = ref(0);
     const totalProblems = ref(0);
+    const anchorRoundProgress = ref(0);
 
     // UI state
     const feedback = ref('');
@@ -52,6 +64,13 @@ export function useMathGame() {
     const itemLog = ref([]);
     let phase = 'IDLE'; // IDLE | HOLD | RETRY | REVEAL | CORRECT
     let currentSolution = { num1: 0, num2: 0, answer: 0 };
+    let currentAnchorKind = null;
+    let currentAnchorTotal = null;
+    let anchorPass = [];
+    let anchorPassIndex = 0;
+    let anchorRng = null;
+    let itemStartedAt = 0;
+    let firstTapBucketForItem = null;
 
     // Internal timer / generation guard (mirrors the crash fix in the original)
     let touchpadTimer = null;
@@ -61,6 +80,22 @@ export function useMathGame() {
 
     // Optional callback fired whenever progress updates
     let progressCallback = null;
+
+    const isAnchor = computed(() => mode.value === ANCHOR_MODE);
+
+    const keypadLength = computed(() => (
+        isAnchor.value ? anchorTotal.value : maxLimit.value
+    ));
+
+    const roundLength = computed(() => (
+        isAnchor.value ? roundLengthForTotal(anchorTotal.value) : ORDINARY_ROUND_LENGTH
+    ));
+
+    const roundProgress = computed(() => {
+        if (isAnchor.value) return anchorRoundProgress.value;
+        if (problemsSolved.value <= 0) return 0;
+        return ((problemsSolved.value - 1) % ORDINARY_ROUND_LENGTH) + 1;
+    });
 
     const progressPercent = computed(() => {
         if (totalProblems.value > 0) {
@@ -89,7 +124,48 @@ export function useMathGame() {
     };
 
     const logItem = (outcome, firstTry) => {
-        itemLog.value.push({ outcome, firstTry, step: step.value });
+        const entry = { outcome, firstTry, step: step.value };
+        if (isAnchor.value) {
+            entry.mode = ANCHOR_MODE;
+            entry.kind = currentAnchorKind;
+            entry.total = currentAnchorTotal;
+            entry.blankField = blankField.value;
+            entry.firstTapBucket = firstTapBucketForItem;
+        }
+        itemLog.value.push(entry);
+    };
+
+    const resetAnchorPass = () => {
+        anchorPass = [];
+        anchorPassIndex = 0;
+        anchorRoundProgress.value = 0;
+    };
+
+    const startAnchorPass = () => {
+        if (!anchorRng) anchorRng = makeRng(Date.now());
+        anchorPass = buildPass(anchorTotal.value, anchorRng);
+        anchorPassIndex = 0;
+    };
+
+    const nextAnchorProblem = () => {
+        if (anchorPassIndex >= anchorPass.length) {
+            startAnchorPass();
+            anchorRoundProgress.value = 0;
+            if (lastProblem !== null && anchorPass.length > 1 &&
+                anchorPass[0].num1 === lastProblem.num1 &&
+                anchorPass[0].num2 === lastProblem.num2 &&
+                anchorPass[0].answer === lastProblem.answer) {
+                [anchorPass[0], anchorPass[1]] = [anchorPass[1], anchorPass[0]];
+            }
+        }
+        return anchorPass[anchorPassIndex++];
+    };
+
+    const completeAnchorItem = () => {
+        if (!isAnchor.value) return;
+        if (anchorRoundProgress.value < roundLength.value) {
+            anchorRoundProgress.value++;
+        }
     };
 
     const enterRetry = () => {
@@ -115,7 +191,7 @@ export function useMathGame() {
         num2.value = String(currentSolution.num2);
         answer.value = String(currentSolution.answer);
         feedbackColor.value = '#4ecdc4';
-        feedback.value = operator.value === '+'
+        feedback.value = (isAnchor.value || operator.value === '+')
             ? `${currentSolution.num1} and ${currentSolution.num2} make ${currentSolution.answer}`
             : `${currentSolution.num1} take away ${currentSolution.num2} makes ${currentSolution.answer}`;
         logItem('missed', false);
@@ -150,24 +226,39 @@ export function useMathGame() {
 
         let problem;
         let currentProblem;
-        let attempts = 0;
-        const maxAttempts = 10;
 
-        do {
-            problem = generateProblem(operator.value, maxLimit.value, mode.value, step.value);
-
+        if (isAnchor.value) {
+            problem = nextAnchorProblem();
+            currentAnchorKind = problem.kind;
+            currentAnchorTotal = problem.answer;
             currentProblem = {
                 num1: problem.num1,
                 num2: problem.num2,
                 answer: problem.answer
             };
+        } else {
+            let attempts = 0;
+            const maxAttempts = 10;
 
-            attempts++;
-        } while (lastProblem !== null &&
-                 currentProblem.num1 === lastProblem.num1 &&
-                 currentProblem.num2 === lastProblem.num2 &&
-                 currentProblem.answer === lastProblem.answer &&
-                 attempts < maxAttempts);
+            do {
+                problem = generateProblem(operator.value, maxLimit.value, mode.value, step.value);
+
+                currentProblem = {
+                    num1: problem.num1,
+                    num2: problem.num2,
+                    answer: problem.answer
+                };
+
+                attempts++;
+            } while (lastProblem !== null &&
+                     currentProblem.num1 === lastProblem.num1 &&
+                     currentProblem.num2 === lastProblem.num2 &&
+                     currentProblem.answer === lastProblem.answer &&
+                     attempts < maxAttempts);
+
+            currentAnchorKind = null;
+            currentAnchorTotal = null;
+        }
 
         lastProblem = currentProblem;
 
@@ -177,6 +268,8 @@ export function useMathGame() {
             answer: problem.answer
         };
         blankField.value = problem.blankField;
+        itemStartedAt = Date.now();
+        firstTapBucketForItem = null;
 
         if (problem.blankField === 'num1') {
             num1.value = '';
@@ -217,13 +310,18 @@ export function useMathGame() {
         const val2 = parseInt(num2.value, 10);
         const answerVal = parseInt(answer.value, 10);
         const wasRetry = phase === 'RETRY';
+        const activeOperator = isAnchor.value ? '+' : operator.value;
 
-        const isCorrect = evaluateAnswer(val1, val2, answerVal, operator.value);
+        const isCorrect = evaluateAnswer(val1, val2, answerVal, activeOperator);
 
         if (isCorrect === null) {
             feedback.value = 'Please fill in all fields!';
             feedbackColor.value = '#ff6b6b';
             return;
+        }
+
+        if (isAnchor.value && firstTapBucketForItem === null) {
+            firstTapBucketForItem = firstTapBucket(Date.now() - itemStartedAt);
         }
 
         if (isCorrect) {
@@ -232,6 +330,7 @@ export function useMathGame() {
             feedback.value = CORRECT_MESSAGES[problemsSolved.value % CORRECT_MESSAGES.length];
             problemsSolved.value++;
             if (!wasRetry) totalProblems.value++;
+            completeAnchorItem();
             
             // Update streak
             streak.value++;
@@ -270,15 +369,16 @@ export function useMathGame() {
 
     function setOperator(op) {
         operator.value = op;
-        generateNewProblem();
+        if (!isAnchor.value) generateNewProblem();
     }
 
     function setMaxLimit(limit) {
         maxLimit.value = limit;
-        generateNewProblem();
+        if (!isAnchor.value) generateNewProblem();
     }
 
     function setMode(nextMode) {
+        if (mode.value !== nextMode) resetAnchorPass();
         mode.value = nextMode;
         generateNewProblem();
     }
@@ -286,7 +386,18 @@ export function useMathGame() {
     function setStep(nextStep) {
         if (!STEPS.includes(nextStep)) return;
         step.value = nextStep;
-        generateNewProblem();
+        if (!isAnchor.value) generateNewProblem();
+    }
+
+    function setAnchorTotal(total) {
+        const numeric = Number(total);
+        const nextTotal = [5, 10].includes(numeric) ? numeric : DEFAULT_ANCHOR_TOTAL;
+        const changed = anchorTotal.value !== nextTotal;
+        anchorTotal.value = nextTotal;
+        if (isAnchor.value && changed) {
+            resetAnchorPass();
+            generateNewProblem();
+        }
     }
 
     function resetProgress() {
@@ -294,6 +405,7 @@ export function useMathGame() {
         totalProblems.value = 0;
         streak.value = 0;
         lastResult.value = '';
+        resetAnchorPass();
     }
 
     function setProgressCallback(cb) {
@@ -319,11 +431,16 @@ export function useMathGame() {
         maxLimit,
         mode,
         step,
+        anchorTotal,
+        keypadLength,
+        roundLength,
+        roundProgress,
         streak,
         bestStreak,
         lastResult,
         isLocked,
         isRevealing,
+        isAnchor,
         blankField,
         itemLog,
         // actions
@@ -334,6 +451,7 @@ export function useMathGame() {
         setMaxLimit,
         setMode,
         setStep,
+        setAnchorTotal,
         resetProgress,
         setProgressCallback,
         cancelPendingAdvance

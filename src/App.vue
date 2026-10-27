@@ -4,6 +4,7 @@ import { useMathGame } from './useMathGame';
 import { useAudioFeedback } from './useAudioFeedback';
 import { usePreferences } from './usePreferences';
 import { STEPS } from './mathEngine';
+import NumberFrame from './components/NumberFrame.vue';
 
 const {
     num1,
@@ -17,11 +18,16 @@ const {
     maxLimit,
     mode,
     step,
+    anchorTotal,
+    keypadLength,
+    roundLength,
+    roundProgress,
     streak,
     bestStreak,
     lastResult,
     isLocked,
     isRevealing,
+    isAnchor,
     blankField,
     generateNewProblem,
     fillValue,
@@ -29,6 +35,7 @@ const {
     setMaxLimit: setGameMaxLimit,
     setMode: setGameMode,
     setStep: setGameStep,
+    setAnchorTotal: setGameAnchorTotal,
     resetProgress,
     setProgressCallback,
     cancelPendingAdvance
@@ -46,7 +53,12 @@ watch(lastResult, (newVal) => {
 });
 
 // Preferences for personalization
-const { playerName, mascot, maxLimit: prefsMaxLimit, mode: prefsMode, step: prefsStep, setPlayerName, setMascot, setMaxLimit: setPrefsMaxLimit, setStep: setPrefsStep, MASCOTS } = usePreferences();
+const { playerName, mascot, maxLimit: prefsMaxLimit, mode: prefsMode, step: prefsStep, anchorTotal: prefsAnchorTotal, setPlayerName, setMascot, setMaxLimit: setPrefsMaxLimit, setMode: setPrefsMode, setStep: setPrefsStep, setAnchorTotal: setPrefsAnchorTotal, MASCOTS } = usePreferences();
+
+const MODE_OPTIONS = [
+    { id: 'result', label: 'Find the total' },
+    { id: 'anchor', label: 'Make 10' }
+];
 
 // Sync maxLimit between preferences and game
 watch(prefsMaxLimit, (newVal) => {
@@ -63,9 +75,18 @@ watch(prefsStep, (newVal) => {
     setGameStep(newVal);
 });
 
+// Sync the anchor family total into the game.
+watch(prefsAnchorTotal, (newVal) => {
+    setGameAnchorTotal(newVal);
+});
+
 // Initialize game maxLimit from stored pref
 if (prefsMaxLimit.value !== 10) {
     setGameMaxLimit(prefsMaxLimit.value);
+}
+
+if (prefsAnchorTotal.value !== 10) {
+    setGameAnchorTotal(prefsAnchorTotal.value);
 }
 
 // Settings panel state
@@ -88,11 +109,25 @@ function selectMascot(m) {
 }
 
 // Operator glyph shown in the equation (use a proper minus sign)
-const opSymbol = computed(() => (operator.value === '+' ? '+' : '−'));
+const opSymbol = computed(() => (isAnchor.value || operator.value === '+' ? '+' : '−'));
 
-const trackProgress = computed(() => {
-    if (problemsSolved.value <= 0) return 0;
-    return ((problemsSolved.value - 1) % 10) + 1;
+const trackRows = computed(() => {
+    const rows = [];
+    for (let start = 1; start <= roundLength.value; start += 5) {
+        const row = [];
+        const end = Math.min(start + 5, roundLength.value + 1);
+        for (let i = start; i < end; i++) {
+            row.push(i);
+        }
+        rows.push(row);
+    }
+    return rows;
+});
+
+const frameFilled = computed(() => {
+    if (blankField.value === 'num1') return Number(num2.value) || 0;
+    if (blankField.value === 'num2') return Number(num1.value) || 0;
+    return (Number(num1.value) || 0) + (Number(num2.value) || 0);
 });
 
 // "How to Use" instructions panel
@@ -144,8 +179,8 @@ watch(celebrationVisible, (visible) => {
     }
 });
 
-setProgressCallback((solved) => {
-    if (solved >= 10 && !celebrationShown.value) {
+setProgressCallback(() => {
+    if (roundProgress.value >= roundLength.value && !celebrationShown.value) {
         celebrationShown.value = true;
         celebrationVisible.value = true;
     }
@@ -217,6 +252,20 @@ function closeCelebration() {
                         maxlength="20"
                     />
                     <button class="action-btn small" @click="saveName">Save</button>
+                </div>
+                <div class="mode-picker">
+                    <label>Task:</label>
+                    <div class="mode-options">
+                        <button
+                            v-for="option in MODE_OPTIONS"
+                            :key="option.id"
+                            class="mode-btn"
+                            :class="{ selected: prefsMode === option.id }"
+                            @click="setPrefsMode(option.id)"
+                        >
+                            {{ option.label }}
+                        </button>
+                    </div>
                 </div>
                 <div class="mascot-picker">
                     <label>Pick Your Mascot:</label>
@@ -300,15 +349,22 @@ function closeCelebration() {
                     <input type="text" :value="answer" :class="{ 'reveal-highlight': isRevealing && blankField === 'answer' }" readonly placeholder="?" />
                 </div>
 
+                <NumberFrame
+                    v-if="isAnchor"
+                    :total="anchorTotal"
+                    :filled="frameFilled"
+                    :revealed="isRevealing"
+                />
+
                 <div class="feedback-area">
                     <div id="feedback" :style="{ color: feedbackColor }">{{ feedback }}</div>
                 </div>
             </div>
 
             <div class="touchpad-container">
-                <div class="touchpad" :style="{ gridTemplateColumns: `repeat(${Math.ceil(Math.sqrt(maxLimit))}, 1fr)` }">
+                <div class="touchpad" :style="{ gridTemplateColumns: `repeat(${Math.ceil(Math.sqrt(keypadLength))}, 1fr)` }">
                     <button
-                        v-for="n in maxLimit"
+                        v-for="n in keypadLength"
                         :key="n"
                         class="touchpad-btn"
                         :disabled="isLocked"
@@ -337,14 +393,9 @@ function closeCelebration() {
                     {{ mascot }}
                 </div>
                 <div class="goal-steps-wrapper">
-                    <div class="goal-steps">
-                        <div class="step" v-for="i in 5" :key="i" :class="{ filled: i <= trackProgress }">
+                    <div class="goal-steps" v-for="(row, rowIndex) in trackRows" :key="rowIndex">
+                        <div class="step" v-for="i in row" :key="i" :class="{ filled: i <= roundProgress }">
                             {{ i }}
-                        </div>
-                    </div>
-                    <div class="goal-steps">
-                        <div class="step" v-for="i in 5" :key="i + 5" :class="{ filled: i + 5 <= trackProgress }">
-                            {{ i + 5 }}
                         </div>
                     </div>
                 </div>
@@ -355,6 +406,9 @@ function closeCelebration() {
             <p class="session-counts">
                 <span class="solved-count">Solved: {{ problemsSolved }}</span>
                 <span class="tried-count">Tried: {{ totalProblems }}</span>
+            </p>
+            <p v-if="isAnchor" class="anchor-summary">
+                first-try here means the frame was read, not that the bond is recalled — recall shows up as fast answers.
             </p>
         </div>
 
@@ -367,7 +421,7 @@ function closeCelebration() {
     <div class="celebration-overlay" :class="{ visible: celebrationVisible }">
         <div class="celebration-content">
             <div class="celebration-title">🎉 Amazing Job! 🎉</div>
-            <p style="font-size: 1.5rem; margin: 10px 0;">You solved 10 problems correctly!</p>
+            <p style="font-size: 1.5rem; margin: 10px 0;">You solved {{ roundProgress }} problems correctly!</p>
             <div style="font-size: 4rem; margin: 20px;">🎊🎈🚀</div>
             <button class="celebration-close-btn" @click="closeCelebration">Keep Playing!</button>
         </div>
