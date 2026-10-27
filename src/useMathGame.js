@@ -8,6 +8,7 @@
 import { ref, computed, onScopeDispose, getCurrentScope } from 'vue';
 import { generateProblem, evaluateAnswer, STEPS } from './mathEngine';
 import { buildPass, makeRng, roundLengthForTotal } from './anchorEngine';
+import { useProgressStats } from './useProgressStats';
 
 const AUTO_ADVANCE_DELAY = 2000;
 const RETRY_HOLD_DELAY = 1500;
@@ -55,9 +56,16 @@ export function useMathGame() {
     const feedback = ref('');
     const feedbackColor = ref('#ff6b6b');
     
-    // Streak state
+    // Streak state. The live streak still resets after a mistake, but the
+    // visible surface shows best-today, which never collapses.
     const streak = ref(0);
-    const bestStreak = ref(0);
+    const {
+        bestEver: bestStreak,
+        bestToday: bestStreakToday,
+        solvedToday: dailySolved,
+        modeCounts: dailyModeCounts,
+        recordSolved
+    } = useProgressStats();
     const lastResult = ref(''); // 'correct' | 'incorrect' (for audio feedback)
 
     // Wrong-answer state and the per-item outcome log
@@ -399,11 +407,9 @@ export function useMathGame() {
             if (!wasRetry) totalProblems.value++;
             completeAnchorItem();
             
-            // Update streak
+            // Update streak and the persisted daily progress.
             streak.value++;
-            if (streak.value > bestStreak.value) {
-                bestStreak.value = streak.value;
-            }
+            recordSolved(streak.value, mode.value);
             lastResult.value = 'correct';
             logItem('correct', !wasRetry);
             
@@ -520,6 +526,9 @@ export function useMathGame() {
         roundProgress,
         streak,
         bestStreak,
+        bestStreakToday,
+        dailySolved,
+        dailyModeCounts,
         lastResult,
         isLocked,
         isRevealing,
