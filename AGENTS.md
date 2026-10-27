@@ -112,3 +112,28 @@ Timer regression tests ported from the original Node suite. Uses
   - Subtraction answers always ≥1 (num2 in [0, num1-1])
   - Input protection with `isLocked` flag disables touchpad during delays
   - "Path to the Party" layout with two rows of numbers for better small-screen layout
+
+## Branch flow (enforced, not advisory)
+
+Two protected branches and one rule: **all work reaches `main` through `UAT`.**
+
+| Branch | What it takes |
+|---|---|
+| `feat/*`, `ci/*`, `docs/*` | your work; open a PR into `UAT` |
+| `UAT` | every change, by pull request only; the `gates` check must pass |
+| `main` | `UAT` only, by pull request, with `gates` **and** `flow` green |
+
+Rulesets `UAT: pull requests only, suite must pass` and `main: releases arrive from UAT only`
+block direct pushes, force-pushes and deletion on both branches. `main` additionally requires the
+`flow` check, which is `.github/workflows/pr-gates.yml` running `scripts/check-branch-flow.sh`:
+a PR into `main` is refused unless the head branch is `UAT` **and** lives in this repository.
+The refusal logic is unit-tested in `test/branchFlow.test.js`; do not move it back into YAML.
+
+Practical consequences:
+
+- `git push origin UAT` and `git push origin main` fail. Merge through a PR.
+- A PR into `main` from a feature branch fails `flow` by design. Merge into `UAT` first.
+- An old branch that predates `pr-gates.yml` cannot reach `main` at all: its checks never report,
+  and `main` waits for them forever. Rebase onto `UAT` instead.
+- Releasing is a human decision: open `UAT -> main` and leave it unmerged until the owner says go.
+  Merging that PR is what publishes to `maths.zt489.com`.
