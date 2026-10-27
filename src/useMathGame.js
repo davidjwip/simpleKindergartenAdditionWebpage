@@ -17,6 +17,7 @@ const DEFAULT_STEP = 'any';
 const ANCHOR_MODE = 'anchor';
 const DEFAULT_ANCHOR_TOTAL = 10;
 const ORDINARY_ROUND_LENGTH = 10;
+const START_LIMIT_CAP = 10;
 
 function firstTapBucket(elapsedMs) {
     if (elapsedMs < 2000) return '<2s';
@@ -32,6 +33,7 @@ export const ENCOURAGEMENT_MESSAGES = [
     'No worries, take another look!',
     'Almost there! Keep going!'
 ];
+const START_ADD_ADVISORY = 'This one is take-away only. Choose another task to add.';
 
 export function useMathGame() {
     // Problem state
@@ -61,6 +63,8 @@ export function useMathGame() {
     // Wrong-answer state and the per-item outcome log
     const blankField = ref(null); // 'num1' | 'num2' | 'answer'
     const isRevealing = ref(false);
+    const putBackDone = ref(false);
+    const putBackUsed = ref(false);
     const itemLog = ref([]);
     let phase = 'IDLE'; // IDLE | HOLD | RETRY | REVEAL | CORRECT
     let currentSolution = { num1: 0, num2: 0, answer: 0 };
@@ -82,9 +86,14 @@ export function useMathGame() {
     let progressCallback = null;
 
     const isAnchor = computed(() => mode.value === ANCHOR_MODE);
+    const isStart = computed(() => mode.value === 'start');
+
+    const effectiveMaxLimit = computed(() => (
+        isStart.value ? Math.min(maxLimit.value, START_LIMIT_CAP) : maxLimit.value
+    ));
 
     const keypadLength = computed(() => (
-        isAnchor.value ? anchorTotal.value : maxLimit.value
+        isAnchor.value ? anchorTotal.value : effectiveMaxLimit.value
     ));
 
     const roundLength = computed(() => (
@@ -127,6 +136,20 @@ export function useMathGame() {
         };
     });
 
+    const startBar = computed(() => {
+        if (!isStart.value) return null;
+
+        const total = Number(currentSolution.num1);
+        const known = Number(answer.value);
+        const takenAway = Number(num2.value);
+
+        return {
+            total: Number.isFinite(total) ? total : 0,
+            known: Number.isFinite(known) ? known : 0,
+            takenAway: Number.isFinite(takenAway) ? takenAway : 0
+        };
+    });
+
     const clearTimer = () => {
         if (touchpadTimer) {
             clearTimeout(touchpadTimer);
@@ -152,6 +175,12 @@ export function useMathGame() {
             entry.total = currentAnchorTotal;
             entry.blankField = blankField.value;
             entry.firstTapBucket = firstTapBucketForItem;
+        } else if (isStart.value) {
+            entry.mode = mode.value;
+            entry.operator = operator.value;
+            entry.limit = effectiveMaxLimit.value;
+            entry.blankField = blankField.value;
+            entry.putBackUsed = putBackUsed.value;
         }
         itemLog.value.push(entry);
     };
@@ -208,13 +237,20 @@ export function useMathGame() {
         phase = 'REVEAL';
         isRevealing.value = true;
         isLocked.value = true;
+        if (isStart.value) {
+            putBackDone.value = true;
+        }
         num1.value = String(currentSolution.num1);
         num2.value = String(currentSolution.num2);
         answer.value = String(currentSolution.answer);
         feedbackColor.value = '#4ecdc4';
-        feedback.value = (isAnchor.value || operator.value === '+')
-            ? `${currentSolution.num1} and ${currentSolution.num2} make ${currentSolution.answer}`
-            : `${currentSolution.num1} take away ${currentSolution.num2} makes ${currentSolution.answer}`;
+        if (isStart.value) {
+            feedback.value = `We started with ${currentSolution.num1}. Take away ${currentSolution.num2}, ${currentSolution.answer} are left.`;
+        } else {
+            feedback.value = (isAnchor.value || operator.value === '+')
+                ? `${currentSolution.num1} and ${currentSolution.num2} make ${currentSolution.answer}`
+                : `${currentSolution.num1} take away ${currentSolution.num2} makes ${currentSolution.answer}`;
+        }
         logItem('missed', false);
         clearTimer();
         touchpadTimer = setTimeout(() => {
@@ -242,6 +278,8 @@ export function useMathGame() {
         lastResult.value = ''; // Reset result for audio re-arming
         isLocked.value = false;
         isRevealing.value = false;
+        putBackDone.value = false;
+        putBackUsed.value = false;
         blankField.value = null;
         phase = 'IDLE';
 
@@ -262,7 +300,7 @@ export function useMathGame() {
             const maxAttempts = 10;
 
             do {
-                problem = generateProblem(operator.value, maxLimit.value, mode.value, step.value);
+                problem = generateProblem(operator.value, effectiveMaxLimit.value, mode.value, step.value);
 
                 currentProblem = {
                     num1: problem.num1,
@@ -321,6 +359,14 @@ export function useMathGame() {
             answer.value = String(value);
         }
         checkAnswer();
+    }
+
+    function putBack() {
+        if (!isStart.value || isRevealing.value || isLocked.value) return;
+        putBackDone.value = true;
+        if (phase === 'IDLE') {
+            putBackUsed.value = true;
+        }
     }
 
     function checkAnswer() {
@@ -389,6 +435,14 @@ export function useMathGame() {
     }
 
     function setOperator(op) {
+        if (op === '+' && isStart.value) {
+            if (phase === 'IDLE' || phase === 'RETRY') {
+                feedback.value = START_ADD_ADVISORY;
+                feedbackColor.value = '#555';
+            }
+            // Leave the current item and any pending timer untouched; the task picker is the way out.
+            return;
+        }
         operator.value = op;
         if (!isAnchor.value) generateNewProblem();
     }
@@ -399,7 +453,12 @@ export function useMathGame() {
     }
 
     function setMode(nextMode) {
-        if (mode.value !== nextMode) resetAnchorPass();
+        if (mode.value !== nextMode) {
+            resetAnchorPass();
+        }
+        if (nextMode === 'start' && operator.value === '+') {
+            operator.value = '-';
+        }
         mode.value = nextMode;
         generateNewProblem();
     }
@@ -450,7 +509,9 @@ export function useMathGame() {
         progressPercent,
         isAdd,
         partWhole,
+        startBar,
         maxLimit,
+        effectiveMaxLimit,
         mode,
         step,
         anchorTotal,
@@ -463,12 +524,16 @@ export function useMathGame() {
         isLocked,
         isRevealing,
         isAnchor,
+        isStart,
+        putBackDone,
+        putBackUsed,
         blankField,
         itemLog,
         // actions
         generateNewProblem,
         checkAnswer,
         fillValue,
+        putBack,
         setOperator,
         setMaxLimit,
         setMode,

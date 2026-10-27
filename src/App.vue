@@ -16,7 +16,6 @@ const {
     feedbackColor,
     problemsSolved,
     totalProblems,
-    maxLimit,
     mode,
     step,
     anchorTotal,
@@ -30,9 +29,15 @@ const {
     isRevealing,
     isAnchor,
     partWhole,
+    startBar,
+    maxLimit,
+    effectiveMaxLimit,
+    putBackDone,
+    putBackUsed,
     blankField,
     generateNewProblem,
     fillValue,
+    putBack,
     setOperator,
     setMaxLimit: setGameMaxLimit,
     setMode: setGameMode,
@@ -58,9 +63,10 @@ watch(lastResult, (newVal) => {
 const { playerName, mascot, maxLimit: prefsMaxLimit, mode: prefsMode, step: prefsStep, anchorTotal: prefsAnchorTotal, setPlayerName, setMascot, setMaxLimit: setPrefsMaxLimit, setMode: setPrefsMode, setStep: setPrefsStep, setAnchorTotal: setPrefsAnchorTotal, MASCOTS } = usePreferences();
 
 const MODE_OPTIONS = [
-    { id: 'result', label: 'Find the total' },
-    { id: 'part', label: 'Find the missing part' },
-    { id: 'anchor', label: 'Make 10' }
+    { id: 'result', label: 'Find the total', hint: '' },
+    { id: 'part', label: 'Find the missing part', hint: 'start with step 1–2' },
+    { id: 'start', label: 'Find what we started with', hint: 'keep step at 1' },
+    { id: 'anchor', label: 'Make 10', hint: '' }
 ];
 
 // Sync maxLimit between preferences and game
@@ -138,7 +144,8 @@ const showInstructions = ref(false);
 
 // Limit popup state
 const showLimitPopup = ref(false);
-const tempLimit = ref(maxLimit.value);
+const tempLimit = ref(effectiveMaxLimit.value);
+const limitTouched = ref(false);
 
 // Operator toggle in header (instead of big buttons)
 const headerOperator = computed({
@@ -148,8 +155,18 @@ const headerOperator = computed({
 
 // Open limit popup
 function openLimitPopup() {
-    tempLimit.value = maxLimit.value;
+    tempLimit.value = effectiveMaxLimit.value;
+    limitTouched.value = false;
     showLimitPopup.value = true;
+}
+
+function touchLimit() {
+    limitTouched.value = true;
+}
+
+function setLimitPreset(preset) {
+    limitTouched.value = true;
+    tempLimit.value = preset;
 }
 
 // Save limit from popup
@@ -158,10 +175,11 @@ function saveLimit() {
     const val = Number.isFinite(numeric)
         ? Math.min(Math.max(numeric, 5), 20)
         : 10;
-    if (val === maxLimit.value) {
-        setGameMaxLimit(val);
+    const nextLimit = limitTouched.value ? val : maxLimit.value;
+    if (nextLimit === maxLimit.value) {
+        setGameMaxLimit(nextLimit);
     }
-    setPrefsMaxLimit(val);
+    setPrefsMaxLimit(nextLimit);
     showLimitPopup.value = false;
 }
 
@@ -230,7 +248,7 @@ function closeCelebration() {
                 </div>
                 <!-- Limit button -->
                 <button class="action-btn small" @click="openLimitPopup">
-                    🔢 Limit: {{ maxLimit }}
+                    🔢 Limit: {{ effectiveMaxLimit }}
                 </button>
                 <button class="action-btn small mute-btn" @click="toggleMuted" :title="isMuted ? 'Unmute sounds' : 'Mute sounds'">
                     {{ isMuted ? '🔇' : '🔊' }}
@@ -259,15 +277,20 @@ function closeCelebration() {
                 <div class="mode-picker">
                     <label>Task:</label>
                     <div class="mode-options">
-                        <button
+                        <div
                             v-for="option in MODE_OPTIONS"
                             :key="option.id"
-                            class="mode-btn"
-                            :class="{ selected: prefsMode === option.id }"
-                            @click="setPrefsMode(option.id)"
+                            class="mode-option"
                         >
-                            {{ option.label }}
-                        </button>
+                            <button
+                                class="mode-btn"
+                                :class="{ selected: prefsMode === option.id }"
+                                @click="setPrefsMode(option.id)"
+                            >
+                                {{ option.label }}
+                            </button>
+                            <span v-if="option.hint" class="mode-hint">{{ option.hint }}</span>
+                        </div>
                     </div>
                 </div>
                 <div class="mascot-picker">
@@ -305,21 +328,31 @@ function closeCelebration() {
         <div class="limit-popup" v-if="showLimitPopup">
             <div class="limit-popup-content">
                 <h3>Set Number Limit</h3>
-                <p>Choose a number between 5 and 20</p>
+                <p v-if="mode === 'start'">This game plays with numbers up to 10. A higher limit stays saved for your other tasks.</p>
+                <p v-else>Choose a number between 5 and 20</p>
                 <div class="limit-input-group">
                     <input
                         type="number"
                         v-model="tempLimit"
                         min="5"
-                        max="20"
+                        :max="mode === 'start' ? 10 : 20"
+                        @input="touchLimit"
                     />
                 </div>
                 <div class="limit-presets">
-                    <button class="limit-preset-btn" @click="tempLimit = 5">5</button>
-                    <button class="limit-preset-btn" @click="tempLimit = 10">10</button>
-                    <button class="limit-preset-btn" @click="tempLimit = 15">15</button>
-                    <button class="limit-preset-btn" @click="tempLimit = 20">20</button>
+                    <button
+                        v-for="preset in [5, 10, 15, 20]"
+                        :key="preset"
+                        class="limit-preset-btn"
+                        :disabled="mode === 'start' && preset > 10"
+                        @click="setLimitPreset(preset)"
+                    >
+                        {{ preset }}
+                    </button>
                 </div>
+                <p v-if="mode === 'start'" class="limit-cap-note">
+                    This game stops at 10, so the dots stay countable.
+                </p>
                 <div class="limit-actions">
                     <button class="action-btn small" @click="cancelLimit">Cancel</button>
                     <button class="action-btn small" style="background-color: #4ecdc4;" @click="saveLimit">Save</button>
@@ -364,6 +397,16 @@ function closeCelebration() {
                     :total="partWhole.total"
                     :known="partWhole.known"
                     :revealed="isRevealing"
+                />
+
+                <DotRow
+                    v-if="mode === 'start' && startBar"
+                    :total="startBar.total"
+                    :known="startBar.known"
+                    :taken-away="startBar.takenAway"
+                    :put-back="putBackDone"
+                    :revealed="isRevealing"
+                    @put-back="putBack"
                 />
 
                 <div class="feedback-area">
