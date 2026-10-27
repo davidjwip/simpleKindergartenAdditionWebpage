@@ -3,6 +3,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import App from '../src/App.vue';
 
+function currentSolution(wrapper) {
+    const inputs = wrapper.findAll('.problem input');
+    const blank = inputs.findIndex((input) => input.element.value === '');
+    const op = wrapper.find('.operator').text() === '+' ? '+' : '-';
+    const [a, b, c] = inputs.map((input) => (input.element.value === '' ? null : Number(input.element.value)));
+    const correct = blank === 0
+        ? (op === '+' ? c - b : c + b)
+        : blank === 1
+            ? (op === '+' ? c - a : a - c)
+            : (op === '+' ? a + b : a - b);
+    return { blank, correct };
+}
+
 describe('App.vue', () => {
     beforeEach(() => {
         // Clear localStorage before each test
@@ -45,6 +58,17 @@ describe('App.vue', () => {
         wrapper.unmount();
     });
 
+    it('renders a 1..10 keypad when the stored limit is corrupt', () => {
+        localStorage.setItem('mathGame.preferences', JSON.stringify({ maxLimit: 'corrupt' }));
+
+        const wrapper = mount(App);
+
+        const buttons = wrapper.findAll('.touchpad-btn');
+        expect(buttons.length).toBe(10);
+        expect(buttons[9].text()).toBe('10');
+        wrapper.unmount();
+    });
+
     it('fills the first empty field when a touchpad button is clicked', async () => {
         const wrapper = mount(App);
         const inputs = wrapper.findAll('.problem input');
@@ -77,6 +101,26 @@ describe('App.vue', () => {
         const wrapper = mount(App);
         const steps = wrapper.findAll('.step');
         expect(steps.length).toBe(10);
+        wrapper.unmount();
+    });
+
+    it('shows session counts without an accuracy fraction', () => {
+        const wrapper = mount(App);
+
+        expect(wrapper.find('.session-counts').exists()).toBe(true);
+        expect(wrapper.find('.solved-count').text()).toBe('Solved: 0');
+        expect(wrapper.find('.tried-count').text()).toBe('Tried: 0');
+        expect(wrapper.find('.progress-area').text()).not.toContain('/');
+        wrapper.unmount();
+    });
+
+    it('lights step 10 when ten problems are solved', async () => {
+        const wrapper = mount(App);
+
+        wrapper.vm.problemsSolved = 10;
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.findAll('.step')[9].classes()).toContain('filled');
         wrapper.unmount();
     });
 
@@ -292,6 +336,36 @@ describe('App.vue', () => {
 
         expect(wrapper.find('.operator').text()).toBe('−');
         wrapper.unmount();
+    });
+
+    it('opens the celebration with no pending advance timer or hidden new item', async () => {
+        vi.useFakeTimers();
+        try {
+            const wrapper = mount(App);
+            const vm = wrapper.vm;
+            vm.problemsSolved = 9;
+            vm.totalProblems = 9;
+
+            const { blank, correct } = currentSolution(wrapper);
+            expect(blank).toBeGreaterThanOrEqual(0);
+
+            await wrapper.findAll('.touchpad-btn')[correct - 1].trigger('click');
+            await wrapper.vm.$nextTick();
+
+            expect(vm.celebrationVisible).toBe(true);
+            expect(wrapper.findAll('.step')[9].classes()).toContain('filled');
+            expect(vi.getTimerCount()).toBe(0);
+
+            const before = wrapper.findAll('.problem input').map((input) => input.element.value);
+            vi.advanceTimersByTime(2000);
+            await wrapper.vm.$nextTick();
+            const after = wrapper.findAll('.problem input').map((input) => input.element.value);
+            expect(after).toEqual(before);
+
+            wrapper.unmount();
+        } finally {
+            vi.useRealTimers();
+        }
     });
 
     it('shows celebration overlay when reaching 10 solved problems', async () => {

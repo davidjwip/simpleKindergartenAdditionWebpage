@@ -18,6 +18,12 @@ const MASCOTS = ['🦊', '🐱', '🐶', '🐰', '🦁', '🐼', '🚀', '🦄']
 // Available names for random fallback (when no name set)
 const RANDOM_NAMES = ['Super Star', 'Math Whiz', 'Problem Solver', 'Number Ninja', 'Brainiac'];
 
+function clampLimit(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return DEFAULT_MAX_LIMIT;
+    return Math.min(Math.max(numeric, MIN_LIMIT), MAX_LIMIT);
+}
+
 export function usePreferences() {
     const playerName = ref('');
     const mascot = ref(DEFAULT_MASCOT);
@@ -32,7 +38,7 @@ export function usePreferences() {
                 if (prefs.playerName) playerName.value = prefs.playerName;
                 if (prefs.mascot && MASCOTS.includes(prefs.mascot)) mascot.value = prefs.mascot;
                 if (prefs.maxLimit !== undefined) {
-                    maxLimit.value = Math.min(Math.max(Number(prefs.maxLimit), MIN_LIMIT), MAX_LIMIT);
+                    maxLimit.value = clampLimit(prefs.maxLimit);
                 }
             } catch (e) {
                 // Invalid JSON, use defaults
@@ -53,8 +59,7 @@ export function usePreferences() {
     };
 
     const setMaxLimit = (limit) => {
-        const clamped = Math.min(Math.max(Number(limit), MIN_LIMIT), MAX_LIMIT);
-        maxLimit.value = clamped;
+        maxLimit.value = clampLimit(limit);
         savePreferences();
     };
 

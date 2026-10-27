@@ -13,7 +13,6 @@ const {
     feedbackColor,
     problemsSolved,
     totalProblems,
-    progressPercent,
     maxLimit,
     streak,
     bestStreak,
@@ -26,7 +25,8 @@ const {
     setOperator,
     setMaxLimit: setGameMaxLimit,
     resetProgress,
-    setProgressCallback
+    setProgressCallback,
+    cancelPendingAdvance
 } = useMathGame();
 
 const { isMuted, toggleMuted, playCorrect, playIncorrect, playCelebration } = useAudioFeedback();
@@ -41,7 +41,7 @@ watch(lastResult, (newVal) => {
 });
 
 // Preferences for personalization
-const { playerName, mascot, maxLimit: prefsMaxLimit, setPlayerName, setMascot, setMaxLimit: setPrefsMaxLimit, MASCOTS, getRandomName } = usePreferences();
+const { playerName, mascot, maxLimit: prefsMaxLimit, setPlayerName, setMascot, setMaxLimit: setPrefsMaxLimit, MASCOTS } = usePreferences();
 
 // Sync maxLimit between preferences and game
 watch(prefsMaxLimit, (newVal) => {
@@ -75,6 +75,11 @@ function selectMascot(m) {
 // Operator glyph shown in the equation (use a proper minus sign)
 const opSymbol = computed(() => (operator.value === '+' ? '+' : '−'));
 
+const trackProgress = computed(() => {
+    if (problemsSolved.value <= 0) return 0;
+    return ((problemsSolved.value - 1) % 10) + 1;
+});
+
 // "How to Use" instructions panel
 const showInstructions = ref(false);
 
@@ -96,8 +101,13 @@ function openLimitPopup() {
 
 // Save limit from popup
 function saveLimit() {
-    const val = Math.min(Math.max(Number(tempLimit.value), 5), 20);
-    setGameMaxLimit(val);
+    const numeric = Number(tempLimit.value);
+    const val = Number.isFinite(numeric)
+        ? Math.min(Math.max(numeric, 5), 20)
+        : 10;
+    if (val === maxLimit.value) {
+        setGameMaxLimit(val);
+    }
     setPrefsMaxLimit(val);
     showLimitPopup.value = false;
 }
@@ -114,6 +124,7 @@ const celebrationVisible = ref(false);
 // Play celebration fanfare when the reward screen appears
 watch(celebrationVisible, (visible) => {
     if (visible) {
+        cancelPendingAdvance();
         playCelebration();
     }
 });
@@ -298,12 +309,12 @@ function closeCelebration() {
                 </div>
                 <div class="goal-steps-wrapper">
                     <div class="goal-steps">
-                        <div class="step" v-for="i in 5" :key="i" :class="{ filled: i <= problemsSolved % 10 }">
+                        <div class="step" v-for="i in 5" :key="i" :class="{ filled: i <= trackProgress }">
                             {{ i }}
                         </div>
                     </div>
                     <div class="goal-steps">
-                        <div class="step" v-for="i in 5" :key="i + 5" :class="{ filled: i + 5 <= problemsSolved % 10 }">
+                        <div class="step" v-for="i in 5" :key="i + 5" :class="{ filled: i + 5 <= trackProgress }">
                             {{ i + 5 }}
                         </div>
                     </div>
@@ -312,9 +323,9 @@ function closeCelebration() {
                     🎉
                 </div>
             </div>
-            <p>
-                Problems Solved: <span>{{ problemsSolved }}</span> /
-                Total Problems: <span>{{ totalProblems }}</span>
+            <p class="session-counts">
+                <span class="solved-count">Solved: {{ problemsSolved }}</span>
+                <span class="tried-count">Tried: {{ totalProblems }}</span>
             </p>
         </div>
 

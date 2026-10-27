@@ -11,7 +11,16 @@ export function generateNumbers(maxLimit) {
     return { num1, num2 };
 }
 
+const MIN_GENERATABLE_LIMIT = 2;
+
+function assertGeneratableLimit(maxLimit) {
+    if (!(maxLimit >= MIN_GENERATABLE_LIMIT)) {
+        throw new RangeError(`A number limit of at least ${MIN_GENERATABLE_LIMIT} is required`);
+    }
+}
+
 export function generateAddition(maxLimit) {
+    assertGeneratableLimit(maxLimit);
     let num1, num2;
     do {
         num1 = Math.floor(Math.random() * maxLimit) + 1;
@@ -21,6 +30,7 @@ export function generateAddition(maxLimit) {
 }
 
 export function generateSubtraction(maxLimit) {
+    assertGeneratableLimit(maxLimit);
     let num1, num2;
     do {
         num1 = Math.floor(Math.random() * maxLimit) + 1;
