@@ -1,5 +1,5 @@
 // mathEngine.test.js — unit tests for the pure, framework-free core.
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
     generateNumbers,
     generateAddition,
@@ -10,6 +10,23 @@ import {
     testSubtraction,
     testRandomField
 } from '../src/mathEngine';
+
+function expectThrowsWithoutDrawing(generator) {
+    let draws = 0;
+    const random = vi.spyOn(Math, 'random').mockImplementation(() => {
+        draws += 1;
+        if (draws > 20) {
+            throw new Error('generator exceeded its draw budget');
+        }
+        return 0;
+    });
+    try {
+        expect(() => generator(1)).toThrow(RangeError);
+        expect(draws).toBe(0);
+    } finally {
+        random.mockRestore();
+    }
+}
 
 describe('generateNumbers', () => {
     it('returns two numbers within the requested limit', () => {
@@ -45,6 +62,10 @@ describe('generateAddition', () => {
         expect(testAddition(10, 50).results.length).toBe(50);
         expect(testAddition(20, 50).allPassed).toBe(true);
         expect(testAddition(20, 50).results.length).toBe(50);
+    });
+
+    it('throws for a limit below 2 instead of spinning', () => {
+        expectThrowsWithoutDrawing(generateAddition);
     });
 });
 
@@ -86,6 +107,21 @@ describe('generateSubtraction', () => {
             expect(p.num2).toBeGreaterThanOrEqual(1);
             expect(p.num1).toBeGreaterThanOrEqual(2);
             expect(p.answer).toBeGreaterThanOrEqual(1);
+        }
+    });
+
+    it('throws for a limit below 2 instead of spinning', () => {
+        expectThrowsWithoutDrawing(generateSubtraction);
+    });
+});
+
+describe('supported number limits', () => {
+    it('generates valid items at every limit from 5 to 20 without hanging', () => {
+        for (let limit = 5; limit <= 20; limit++) {
+            const addition = testAddition(limit, 50);
+            const subtraction = testSubtraction(limit, 50);
+            expect(addition.allPassed).toBe(true);
+            expect(subtraction.allPassed).toBe(true);
         }
     });
 });

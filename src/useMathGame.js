@@ -298,6 +298,10 @@ export function useMathGame() {
         progressCallback = cb;
     }
 
+    function cancelPendingAdvance() {
+        clearTimer();
+    }
+
     return {
         // state
         num1,
@@ -325,6 +329,7 @@ export function useMathGame() {
         setOperator,
         setMaxLimit,
         resetProgress,
-        setProgressCallback
+        setProgressCallback,
+        cancelPendingAdvance
     };
 }

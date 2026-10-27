@@ -64,6 +64,25 @@ describe('usePreferences', () => {
         expect(stored.maxLimit).toBe(15);
     });
 
+    it('rejects non-finite limits in setMaxLimit', () => {
+        const { maxLimit, setMaxLimit } = usePreferences();
+
+        setMaxLimit(Number('corrupt'));
+        expect(maxLimit.value).toBe(10);
+
+        setMaxLimit(Infinity);
+        expect(maxLimit.value).toBe(10);
+    });
+
+    it('falls back to the default limit when the stored limit is non-finite', () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ maxLimit: 'corrupt' }));
+
+        const { wrapper, state } = mountPreferences();
+
+        expect(state.maxLimit.value).toBe(10);
+        wrapper.unmount();
+    });
+
     it('getRandomName returns a random name', () => {
         const { getRandomName } = usePreferences();
 
