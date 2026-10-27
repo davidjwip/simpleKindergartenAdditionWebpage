@@ -462,7 +462,7 @@ function closeCelebration() {
                 />
 
                 <div class="feedback-area">
-                    <div id="feedback" :style="{ color: feedbackColor }">{{ feedback }}</div>
+                    <div id="feedback" aria-live="polite" :style="{ color: feedbackColor }">{{ feedback }}</div>
                 </div>
             </div>
 

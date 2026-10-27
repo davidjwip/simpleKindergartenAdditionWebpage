@@ -235,6 +235,11 @@ main {
     transform: scale(0.95);
 }
 
+.touchpad-btn:focus-visible {
+    outline: 3px solid #2f9e94;
+    outline-offset: 2px;
+}
+
 .touchpad-btn:disabled {
     background-color: #f0f0f0;
     border-color: #cccccc;
