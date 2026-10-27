@@ -6,12 +6,13 @@
  * unit-tested outside a real browser.
  */
 import { ref, computed, onScopeDispose, getCurrentScope } from 'vue';
-import { generateProblem, evaluateAnswer } from './mathEngine';
+import { generateProblem, evaluateAnswer, STEPS } from './mathEngine';
 
 const AUTO_ADVANCE_DELAY = 2000;
 const RETRY_HOLD_DELAY = 1500;
 const REVEAL_DELAY = 2500;
 const DEFAULT_MODE = 'result';
+const DEFAULT_STEP = 'any';
 
 // Message pools for variety
 const CORRECT_MESSAGES = ['Correct! 🎉', 'Great job! ⭐', 'Awesome! 🌟', 'You did it! 💪', 'Super! 🎈'];
@@ -30,6 +31,7 @@ export function useMathGame() {
     const operator = ref('+');
     const maxLimit = ref(10);
     const mode = ref(DEFAULT_MODE);
+    const step = ref(DEFAULT_STEP);
 
     // Progress state
     const problemsSolved = ref(0);
@@ -87,7 +89,7 @@ export function useMathGame() {
     };
 
     const logItem = (outcome, firstTry) => {
-        itemLog.value.push({ outcome, firstTry });
+        itemLog.value.push({ outcome, firstTry, step: step.value });
     };
 
     const enterRetry = () => {
@@ -152,7 +154,7 @@ export function useMathGame() {
         const maxAttempts = 10;
 
         do {
-            problem = generateProblem(operator.value, maxLimit.value, mode.value);
+            problem = generateProblem(operator.value, maxLimit.value, mode.value, step.value);
 
             currentProblem = {
                 num1: problem.num1,
@@ -281,6 +283,12 @@ export function useMathGame() {
         generateNewProblem();
     }
 
+    function setStep(nextStep) {
+        if (!STEPS.includes(nextStep)) return;
+        step.value = nextStep;
+        generateNewProblem();
+    }
+
     function resetProgress() {
         problemsSolved.value = 0;
         totalProblems.value = 0;
@@ -310,6 +318,7 @@ export function useMathGame() {
         isAdd,
         maxLimit,
         mode,
+        step,
         streak,
         bestStreak,
         lastResult,
@@ -324,6 +333,7 @@ export function useMathGame() {
         setOperator,
         setMaxLimit,
         setMode,
+        setStep,
         resetProgress,
         setProgressCallback,
         cancelPendingAdvance

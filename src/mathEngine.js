@@ -19,8 +19,44 @@ function assertGeneratableLimit(maxLimit) {
     }
 }
 
-export function generateAddition(maxLimit) {
+export const STEPS = ['1', '2', '3-5', 'any'];
+
+function assertStep(step) {
+    if (!STEPS.includes(step)) {
+        throw new RangeError(`Unknown step: ${step}`);
+    }
+}
+
+function stepCandidates(step) {
+    const candidates = { '1': [1], '2': [2], '3-5': [3, 4, 5] };
+    return candidates[step] || [];
+}
+
+/**
+ * Picks the number being added or taken away. The step constrains num2 for
+ * both operators and for every blank mode: the mode only decides which field
+ * is blank. For subtraction num2 is the subtrahend (the smaller operand),
+ * while num1 is the larger operand. Candidates stay below the limit so the
+ * other operand always has room.
+ */
+function pickStepValue(step, maxLimit) {
+    const candidates = stepCandidates(step).filter((value) => value < maxLimit);
+    if (candidates.length === 0) {
+        throw new RangeError(`Step ${step} cannot be generated at limit ${maxLimit}`);
+    }
+    return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+export function generateAddition(maxLimit, step = 'any') {
     assertGeneratableLimit(maxLimit);
+    assertStep(step);
+
+    if (step !== 'any') {
+        const num2 = pickStepValue(step, maxLimit);
+        const num1 = Math.floor(Math.random() * (maxLimit - num2)) + 1;
+        return { num1, num2, answer: num1 + num2 };
+    }
+
     let num1, num2;
     do {
         num1 = Math.floor(Math.random() * maxLimit) + 1;
@@ -29,8 +65,16 @@ export function generateAddition(maxLimit) {
     return { num1, num2, answer: num1 + num2 };
 }
 
-export function generateSubtraction(maxLimit) {
+export function generateSubtraction(maxLimit, step = 'any') {
     assertGeneratableLimit(maxLimit);
+    assertStep(step);
+
+    if (step !== 'any') {
+        const num2 = pickStepValue(step, maxLimit);
+        const num1 = num2 + 1 + Math.floor(Math.random() * (maxLimit - num2));
+        return { num1, num2, answer: num1 - num2 };
+    }
+
     let num1, num2;
     do {
         num1 = Math.floor(Math.random() * maxLimit) + 1;
@@ -73,11 +117,12 @@ function blankFieldFor(operator, mode) {
 
 /**
  * Builds an item whose blank is chosen by the task mode, never at random.
- * step is a generation parameter for a later increment and is not item data.
+ * step is a generation parameter and is deliberately not item data.
  */
-export function generateProblem(operator, limit, mode = 'result') {
+export function generateProblem(operator, limit, mode = 'result', step = 'any') {
     assertMode(operator, mode);
-    const base = operator === '+' ? generateAddition(limit) : generateSubtraction(limit);
+    assertStep(step);
+    const base = operator === '+' ? generateAddition(limit, step) : generateSubtraction(limit, step);
     return {
         num1: base.num1,
         num2: base.num2,

@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { useMathGame } from './useMathGame';
 import { useAudioFeedback } from './useAudioFeedback';
 import { usePreferences } from './usePreferences';
+import { STEPS } from './mathEngine';
 
 const {
     num1,
@@ -15,6 +16,7 @@ const {
     totalProblems,
     maxLimit,
     mode,
+    step,
     streak,
     bestStreak,
     lastResult,
@@ -26,6 +28,7 @@ const {
     setOperator,
     setMaxLimit: setGameMaxLimit,
     setMode: setGameMode,
+    setStep: setGameStep,
     resetProgress,
     setProgressCallback,
     cancelPendingAdvance
@@ -43,7 +46,7 @@ watch(lastResult, (newVal) => {
 });
 
 // Preferences for personalization
-const { playerName, mascot, maxLimit: prefsMaxLimit, mode: prefsMode, setPlayerName, setMascot, setMaxLimit: setPrefsMaxLimit, MASCOTS } = usePreferences();
+const { playerName, mascot, maxLimit: prefsMaxLimit, mode: prefsMode, step: prefsStep, setPlayerName, setMascot, setMaxLimit: setPrefsMaxLimit, setStep: setPrefsStep, MASCOTS } = usePreferences();
 
 // Sync maxLimit between preferences and game
 watch(prefsMaxLimit, (newVal) => {
@@ -53,6 +56,11 @@ watch(prefsMaxLimit, (newVal) => {
 // Sync the stored task mode into the game. Result-unknown is the default.
 watch(prefsMode, (newVal) => {
     setGameMode(newVal);
+});
+
+// Sync the stored step into the game. Any step is the default.
+watch(prefsStep, (newVal) => {
+    setGameStep(newVal);
 });
 
 // Initialize game maxLimit from stored pref
@@ -221,6 +229,20 @@ function closeCelebration() {
                             @click="selectMascot(m)"
                         >
                             {{ m }}
+                        </button>
+                    </div>
+                </div>
+                <div class="step-picker">
+                    <label>Step Size:</label>
+                    <div class="step-options">
+                        <button
+                            v-for="s in STEPS"
+                            :key="s"
+                            class="step-btn"
+                            :class="{ selected: prefsStep === s }"
+                            @click="setPrefsStep(s)"
+                        >
+                            {{ s === 'any' ? 'Any' : s }}
                         </button>
                     </div>
                 </div>
