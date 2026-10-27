@@ -449,7 +449,7 @@ describe('adult panels dismiss themselves', () => {
         await wrapper.find('.options-btn').trigger('click');
         expect(wrapper.find('.settings-panel').exists()).toBe(true);
 
-        document.dispatchEvent(new Event('pointerdown'));
+        document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
         await wrapper.vm.$nextTick();
 
         expect(wrapper.find('.settings-panel').exists()).toBe(false);
@@ -473,7 +473,7 @@ describe('adult panels dismiss themselves', () => {
         await limitButton.trigger('click');
         expect(wrapper.find('.limit-popup').exists()).toBe(true);
 
-        document.dispatchEvent(new Event('pointerdown'));
+        document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
         await wrapper.vm.$nextTick();
 
         expect(wrapper.find('.limit-popup').exists()).toBe(false);
@@ -548,6 +548,44 @@ describe('adult panels dismiss themselves', () => {
         }
         expect(text.toLowerCase()).toContain('one more try');
         expect(text.toLowerCase()).toMatch(/ten correct answers|one pass/);
+        // the start-mode cap is stated where the adult sets the limit, so the copy says it too
+        expect(text.toLowerCase()).toContain('stops at 10');
+        wrapper.unmount();
+    });
+
+    it('re-opening the limit frame shows the saved limit, not an abandoned draft', async () => {
+        const wrapper = mount(App);
+        const limitButton = wrapper.findAll('button').find((b) => b.text().includes('Limit'));
+
+        await limitButton.trigger('click');
+        const input = wrapper.find('.limit-popup-content input[type="number"]');
+        const saved = input.element.value;
+        await input.setValue('17');
+
+        // dismissed without saving: an outside pointer-down, not the Save button
+        document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('.limit-popup').exists()).toBe(false);
+
+        await limitButton.trigger('click');
+        const reopened = wrapper.find('.limit-popup-content input[type="number"]');
+        expect(reopened.element.value).toBe(saved);
+        expect(reopened.element.value).not.toBe('17');
+        wrapper.unmount();
+    });
+
+    it('discards an abandoned name draft when the Options panel closes', async () => {
+        const wrapper = mount(App);
+        await wrapper.find('.options-btn').trigger('click');
+        const nameInput = wrapper.find('.settings-panel input[type="text"]');
+        await nameInput.setValue('Half-typed');
+
+        document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('.settings-panel').exists()).toBe(false);
+
+        await wrapper.find('.options-btn').trigger('click');
+        expect(wrapper.find('.settings-panel input[type="text"]').element.value).toBe('');
         wrapper.unmount();
     });
 });
