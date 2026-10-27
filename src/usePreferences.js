@@ -1,8 +1,9 @@
 /**
  * usePreferences.js — Vue composable for user preferences persisted to localStorage.
- * Stores: player name, mascot, number limit and task mode.
+ * Stores: player name, mascot, number limit, task mode and step size.
  */
 import { ref, onMounted } from 'vue';
+import { STEPS } from './mathEngine';
 
 const STORAGE_KEY = 'mathGame.preferences';
 const DEFAULT_MAX_LIMIT = 10;
@@ -10,6 +11,7 @@ const MIN_LIMIT = 5;
 const MAX_LIMIT = 20;
 const MODES = ['result', 'part', 'start'];
 const DEFAULT_MODE = 'result';
+const DEFAULT_STEP = 'any';
 
 // Default mascot for kids
 const DEFAULT_MASCOT = '🦊';
@@ -31,6 +33,7 @@ export function usePreferences() {
     const mascot = ref(DEFAULT_MASCOT);
     const maxLimit = ref(DEFAULT_MAX_LIMIT);
     const mode = ref(DEFAULT_MODE);
+    const step = ref(DEFAULT_STEP);
 
     // Load preferences from localStorage on mount
     onMounted(() => {
@@ -44,6 +47,7 @@ export function usePreferences() {
                     maxLimit.value = clampLimit(prefs.maxLimit);
                 }
                 mode.value = MODES.includes(prefs.mode) ? prefs.mode : DEFAULT_MODE;
+                step.value = STEPS.includes(prefs.step) ? prefs.step : DEFAULT_STEP;
             } catch (e) {
                 // Invalid JSON, use defaults
             }
@@ -74,6 +78,13 @@ export function usePreferences() {
         }
     };
 
+    const setStep = (selectedStep) => {
+        if (STEPS.includes(selectedStep)) {
+            step.value = selectedStep;
+            savePreferences();
+        }
+    };
+
     const getRandomName = () => {
         return RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
     };
@@ -83,7 +94,8 @@ export function usePreferences() {
             playerName: playerName.value,
             mascot: mascot.value,
             maxLimit: maxLimit.value,
-            mode: mode.value
+            mode: mode.value,
+            step: step.value
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
     };
@@ -93,10 +105,12 @@ export function usePreferences() {
         mascot,
         maxLimit,
         mode,
+        step,
         setPlayerName,
         setMascot,
         setMaxLimit,
         setMode,
+        setStep,
         getRandomName,
         MASCOTS
     };
