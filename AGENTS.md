@@ -137,3 +137,18 @@ Practical consequences:
   and `main` waits for them forever. Rebase onto `UAT` instead.
 - Releasing is a human decision: open `UAT -> main` and leave it unmerged until the owner says go.
   Merging that PR is what publishes to `maths.zt489.com`.
+
+## Where the gate lives (navigation)
+
+- `.github/workflows/pr-gates.yml` runs `gates` (install, test, coverage, build) on every PR into
+  `UAT` or `main`, and `flow` on PRs into `main`.
+- `scripts/check-branch-flow.sh` is the source rule for `main`; `test/branchFlow.test.js` proves its
+  refusals. Do not move that logic back into YAML — untested YAML is how the fork hole got in.
+- `docs/review-rules.md` is binding for reviewers: R1 assert the reason, R2 contract not shuffle,
+  R3 zero chance of passing by luck, R4 name the change that would fail, R5 verify identity,
+  R6 coverage is not evidence.
+- Test order is randomised (`sequence.shuffle` in `vite.config.js`). Vitest prints `Running tests with
+  seed "<n>"` at the start of every run; re-run with `--sequence.seed=<n>` to reproduce an order. A failure that only appears under shuffle is a
+  real defect: some test depends on another having run first.
+- Where a test needs a deterministic shuffle, inject it: `useMathGame({ anchorRng: makeRng(seed) })`.
+  Production passes nothing and keeps seeding from the clock.

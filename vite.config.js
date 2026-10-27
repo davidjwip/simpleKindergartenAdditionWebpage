@@ -8,6 +8,11 @@ export default defineConfig({
     base: './',
     test: {
         environment: 'happy-dom',
+        // Randomise test order so a test cannot quietly depend on another having run first. The
+        // seed is printed on failure, so any order-dependent test is reproducible from the log.
+        sequence: {
+            shuffle: true
+        },
         setupFiles: ['./test/setup.js'],
         coverage: {
             provider: 'v8',
