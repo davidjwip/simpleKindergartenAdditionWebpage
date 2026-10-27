@@ -345,10 +345,6 @@ describe('pass and progress guards', () => {
         vi.setSystemTime(seed);
         game.setModeOption({ mode: 'anchor', anchorTotal: 5, anchorKind: 'bond' });
 
-        const rng = makeRng(seed);
-        const firstPass = buildPass('make-five', rng);
-        const secondPass = buildPass('make-five', rng);
-
         const seen = [];
         for (let i = 0; i < 8; i++) {
             seen.push(gameItem(game));
@@ -361,20 +357,16 @@ describe('pass and progress guards', () => {
         const firstBlock = order(seen.slice(0, 4));
         const secondBlock = order(seen.slice(4));
 
+        // The contract is a permutation per pass plus a non-repeating boundary. Pinning the exact
+        // order (or asserting the two passes differ) made this test depend on the shuffle: the
+        // engine seeds one rng per module instance from the wall clock, so order varies between
+        // runs and two permutations match 1 time in 24. That flake is what failed CI on the
+        // release PR.
         expect([...firstBlock].sort()).toEqual([...expectedPairs].sort());
         expect([...secondBlock].sort()).toEqual([...expectedPairs].sort());
         expect(new Set(firstBlock).size).toBe(4);
         expect(new Set(secondBlock).size).toBe(4);
         expect(firstBlock[3]).not.toBe(secondBlock[0]);
-        expect(firstBlock).toEqual(order(firstPass));
-
-        let expectedSecond = [...secondPass];
-        if (secondPass[0].num1 === firstPass[3].num1 &&
-            secondPass[0].num2 === firstPass[3].num2) {
-            [expectedSecond[0], expectedSecond[1]] = [expectedSecond[1], expectedSecond[0]];
-        }
-        expect(secondBlock).toEqual(order(expectedSecond));
-        expect(secondBlock).not.toEqual(firstBlock);
     });
 });
 

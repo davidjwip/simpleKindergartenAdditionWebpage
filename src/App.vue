@@ -120,6 +120,21 @@ const tempName = ref(playerName.value);
 tempName.value = playerName.value;
 
 // Save name when closing settings
+function closeOptionsPanel() {
+    showSettings.value = false;
+    // A half-typed name is a draft, not a preference: closing the panel discards it.
+    tempName.value = playerName.value;
+}
+
+function toggleOptions() {
+    if (showSettings.value) {
+        closeOptionsPanel();
+        return;
+    }
+    tempName.value = playerName.value;
+    showSettings.value = true;
+}
+
 function saveName() {
     setPlayerName(tempName.value.trim());
     showSettings.value = false;
@@ -197,18 +212,18 @@ function onDocumentPointerDown(event) {
     const target = event.target;
     if (showSettings.value && optionsPanel.value && !optionsPanel.value.contains(target) &&
         !(optionsButton.value && optionsButton.value.contains(target))) {
-        showSettings.value = false;
+        closeOptionsPanel();
     }
     if (showLimitPopup.value && limitPopup.value && !limitPopup.value.contains(target) &&
         !(limitButton.value && limitButton.value.contains(target))) {
-        showLimitPopup.value = false;
+        closeLimitPopup();
     }
 }
 
 function onDocumentKeydown(event) {
     if (event.key !== 'Escape') return;
-    showSettings.value = false;
-    showLimitPopup.value = false;
+    if (showSettings.value) closeOptionsPanel();
+    if (showLimitPopup.value) closeLimitPopup();
 }
 
 onMounted(() => {
@@ -231,15 +246,20 @@ const headerOperator = computed({
 
 // Open limit popup
 function openLimitPopup() {
-    // Same gesture as Options: pressing the button again puts the frame away, rather than
-    // re-opening it on top of itself with a reset draft.
+    // Same gesture as Options: pressing the button again puts the frame away.
     if (showLimitPopup.value) {
-        showLimitPopup.value = false;
+        closeLimitPopup();
         return;
     }
     tempLimit.value = effectiveMaxLimit.value;
     limitTouched.value = false;
     showLimitPopup.value = true;
+}
+
+function closeLimitPopup() {
+    // The draft belongs to the open: openLimitPopup reseeds tempLimit and limitTouched every time,
+    // so this only has to put the frame away.
+    showLimitPopup.value = false;
 }
 
 function touchLimit() {
@@ -267,7 +287,7 @@ function saveLimit() {
 
 // Cancel limit change
 function cancelLimit() {
-    showLimitPopup.value = false;
+    closeLimitPopup();
 }
 
 // Celebration overlay — shows once per 10 solved problems
@@ -341,7 +361,7 @@ function closeCelebration() {
                     :class="{ 'options-open': showSettings }"
                     :aria-expanded="showSettings"
                     aria-haspopup="dialog"
-                    @click="showSettings = !showSettings"
+                    @click="toggleOptions"
                 >Options</button>
             </div>
         </header>
@@ -485,7 +505,8 @@ function closeCelebration() {
                     <li><strong>Show counters</strong> — draws dots under the numbers so a problem can be counted
                         instead of remembered. It makes each one easier and slower: leave it on while the child
                         is counting, turn it off once answers come without counting.</li>
-                    <li><strong>Limit</strong> — the biggest number in play, 5 to 20.</li>
+                    <li><strong>Limit</strong> — the biggest number in play, 5 to 20. “Find what we started with”
+                        stops at 10 so the dots stay countable.</li>
                     <li><strong>Name and mascot</strong> — kept on this device only, never sent anywhere.</li>
                 </ul>
                 <p><strong>A wrong answer gets one more try.</strong> After a second miss the correct sum is shown so the child can see how it works, then the next problem comes.</p>
