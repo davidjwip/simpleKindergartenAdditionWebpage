@@ -6,16 +6,12 @@
  * unit-tested outside a real browser.
  */
 import { ref, computed, onScopeDispose, getCurrentScope } from 'vue';
-import {
-    generateAddition,
-    generateSubtraction,
-    pickRandomField,
-    evaluateAnswer
-} from './mathEngine';
+import { generateProblem, evaluateAnswer } from './mathEngine';
 
 const AUTO_ADVANCE_DELAY = 2000;
 const RETRY_HOLD_DELAY = 1500;
 const REVEAL_DELAY = 2500;
+const DEFAULT_MODE = 'result';
 
 // Message pools for variety
 const CORRECT_MESSAGES = ['Correct! 🎉', 'Great job! ⭐', 'Awesome! 🌟', 'You did it! 💪', 'Super! 🎈'];
@@ -33,6 +29,7 @@ export function useMathGame() {
     const answer = ref('');
     const operator = ref('+');
     const maxLimit = ref(10);
+    const mode = ref(DEFAULT_MODE);
 
     // Progress state
     const problemsSolved = ref(0);
@@ -48,7 +45,7 @@ export function useMathGame() {
     const lastResult = ref(''); // 'correct' | 'incorrect' (for audio feedback)
 
     // Wrong-answer state and the per-item outcome log
-    const blankField = ref(null); // 0 = num1, 1 = num2, 2 = answer
+    const blankField = ref(null); // 'num1' | 'num2' | 'answer'
     const isRevealing = ref(false);
     const itemLog = ref([]);
     let phase = 'IDLE'; // IDLE | HOLD | RETRY | REVEAL | CORRECT
@@ -98,9 +95,9 @@ export function useMathGame() {
         phase = 'RETRY';
         feedback.value = '';
         lastResult.value = '';
-        if (blankField.value === 0) {
+        if (blankField.value === 'num1') {
             num1.value = '';
-        } else if (blankField.value === 1) {
+        } else if (blankField.value === 'num2') {
             num2.value = '';
         } else {
             answer.value = '';
@@ -153,48 +150,40 @@ export function useMathGame() {
         let currentProblem;
         let attempts = 0;
         const maxAttempts = 10;
-        
+
         do {
-            problem =
-                operator.value === '+' ? generateAddition(maxLimit.value) : generateSubtraction(maxLimit.value);
-            
+            problem = generateProblem(operator.value, maxLimit.value, mode.value);
+
             currentProblem = {
-                num1: operator.value === '+' ? problem.num1 : problem.num1,
-                num2: operator.value === '+' ? problem.num2 : problem.num2,
-                answer: operator.value === '+' ? problem.answer : problem.num1 - problem.num2
+                num1: problem.num1,
+                num2: problem.num2,
+                answer: problem.answer
             };
-            
+
             attempts++;
-        } while (lastProblem !== null && 
-                 currentProblem.num1 === lastProblem.num1 && 
-                 currentProblem.num2 === lastProblem.num2 && 
+        } while (lastProblem !== null &&
+                 currentProblem.num1 === lastProblem.num1 &&
+                 currentProblem.num2 === lastProblem.num2 &&
                  currentProblem.answer === lastProblem.answer &&
                  attempts < maxAttempts);
 
         lastProblem = currentProblem;
 
-        const emptyField = pickRandomField();
-        const answerText = String(
-            operator.value === '+'
-                ? problem.num1 + problem.num2
-                : problem.num1 - problem.num2
-        );
-
         currentSolution = {
             num1: problem.num1,
             num2: problem.num2,
-            answer: Number(answerText)
+            answer: problem.answer
         };
-        blankField.value = emptyField;
+        blankField.value = problem.blankField;
 
-        if (emptyField === 0) {
+        if (problem.blankField === 'num1') {
             num1.value = '';
             num2.value = String(problem.num2);
-            answer.value = answerText;
-        } else if (emptyField === 1) {
+            answer.value = String(problem.answer);
+        } else if (problem.blankField === 'num2') {
             num1.value = String(problem.num1);
             num2.value = '';
-            answer.value = answerText;
+            answer.value = String(problem.answer);
         } else {
             num1.value = String(problem.num1);
             num2.value = String(problem.num2);
@@ -287,6 +276,11 @@ export function useMathGame() {
         generateNewProblem();
     }
 
+    function setMode(nextMode) {
+        mode.value = nextMode;
+        generateNewProblem();
+    }
+
     function resetProgress() {
         problemsSolved.value = 0;
         totalProblems.value = 0;
@@ -315,6 +309,7 @@ export function useMathGame() {
         progressPercent,
         isAdd,
         maxLimit,
+        mode,
         streak,
         bestStreak,
         lastResult,
@@ -328,6 +323,7 @@ export function useMathGame() {
         fillValue,
         setOperator,
         setMaxLimit,
+        setMode,
         resetProgress,
         setProgressCallback,
         cancelPendingAdvance

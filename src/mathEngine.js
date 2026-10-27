@@ -42,9 +42,50 @@ export function generateSubtraction(maxLimit) {
 /**
  * Randomly decides which field (A, B, or C) is left blank.
  * 0 -> num1, 1 -> num2, 2 -> answer.
+ * Legacy path: generateProblem now decides the blank from the mode.
  */
 export function pickRandomField() {
     return Math.floor(Math.random() * 3);
+}
+
+export const MODES = ['result', 'part', 'start'];
+
+function assertMode(operator, mode) {
+    if (!MODES.includes(mode)) {
+        throw new RangeError(`Unknown mode: ${mode}`);
+    }
+    if (operator !== '+' && operator !== '-') {
+        throw new RangeError(`Unknown operator: ${operator}`);
+    }
+    if (mode === 'start' && operator === '+') {
+        throw new RangeError('Start-unknown mode is only available for subtraction');
+    }
+}
+
+function blankFieldFor(operator, mode) {
+    if (mode === 'result') return 'answer';
+    if (mode === 'part') {
+        if (operator === '-') return 'num2';
+        return Math.random() < 0.5 ? 'num1' : 'num2';
+    }
+    return 'num1';
+}
+
+/**
+ * Builds an item whose blank is chosen by the task mode, never at random.
+ * step is a generation parameter for a later increment and is not item data.
+ */
+export function generateProblem(operator, limit, mode = 'result') {
+    assertMode(operator, mode);
+    const base = operator === '+' ? generateAddition(limit) : generateSubtraction(limit);
+    return {
+        num1: base.num1,
+        num2: base.num2,
+        answer: base.answer,
+        operator,
+        blankField: blankFieldFor(operator, mode),
+        mode
+    };
 }
 
 /**

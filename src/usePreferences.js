@@ -1,6 +1,6 @@
 /**
  * usePreferences.js — Vue composable for user preferences persisted to localStorage.
- * Stores: player name and mascot selection.
+ * Stores: player name, mascot, number limit and task mode.
  */
 import { ref, onMounted } from 'vue';
 
@@ -8,6 +8,8 @@ const STORAGE_KEY = 'mathGame.preferences';
 const DEFAULT_MAX_LIMIT = 10;
 const MIN_LIMIT = 5;
 const MAX_LIMIT = 20;
+const MODES = ['result', 'part', 'start'];
+const DEFAULT_MODE = 'result';
 
 // Default mascot for kids
 const DEFAULT_MASCOT = '🦊';
@@ -28,6 +30,7 @@ export function usePreferences() {
     const playerName = ref('');
     const mascot = ref(DEFAULT_MASCOT);
     const maxLimit = ref(DEFAULT_MAX_LIMIT);
+    const mode = ref(DEFAULT_MODE);
 
     // Load preferences from localStorage on mount
     onMounted(() => {
@@ -40,6 +43,7 @@ export function usePreferences() {
                 if (prefs.maxLimit !== undefined) {
                     maxLimit.value = clampLimit(prefs.maxLimit);
                 }
+                mode.value = MODES.includes(prefs.mode) ? prefs.mode : DEFAULT_MODE;
             } catch (e) {
                 // Invalid JSON, use defaults
             }
@@ -63,6 +67,13 @@ export function usePreferences() {
         savePreferences();
     };
 
+    const setMode = (selectedMode) => {
+        if (MODES.includes(selectedMode)) {
+            mode.value = selectedMode;
+            savePreferences();
+        }
+    };
+
     const getRandomName = () => {
         return RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
     };
@@ -71,7 +82,8 @@ export function usePreferences() {
         const prefs = {
             playerName: playerName.value,
             mascot: mascot.value,
-            maxLimit: maxLimit.value
+            maxLimit: maxLimit.value,
+            mode: mode.value
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
     };
@@ -80,9 +92,11 @@ export function usePreferences() {
         playerName,
         mascot,
         maxLimit,
+        mode,
         setPlayerName,
         setMascot,
         setMaxLimit,
+        setMode,
         getRandomName,
         MASCOTS
     };
