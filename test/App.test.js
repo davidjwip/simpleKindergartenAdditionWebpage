@@ -3,6 +3,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import App from '../src/App.vue';
 
+function currentSolution(wrapper) {
+    const inputs = wrapper.findAll('.problem input');
+    const blank = inputs.findIndex((input) => input.element.value === '');
+    const op = wrapper.find('.operator').text() === '+' ? '+' : '-';
+    const [a, b, c] = inputs.map((input) => (input.element.value === '' ? null : Number(input.element.value)));
+    const correct = blank === 0
+        ? (op === '+' ? c - b : c + b)
+        : blank === 1
+            ? (op === '+' ? c - a : a - c)
+            : (op === '+' ? a + b : a - b);
+    return { blank, correct };
+}
+
 describe('App.vue', () => {
     beforeEach(() => {
         // Clear localStorage before each test
@@ -45,6 +58,17 @@ describe('App.vue', () => {
         wrapper.unmount();
     });
 
+    it('renders a 1..10 keypad when the stored limit is corrupt', () => {
+        localStorage.setItem('mathGame.preferences', JSON.stringify({ maxLimit: 'corrupt' }));
+
+        const wrapper = mount(App);
+
+        const buttons = wrapper.findAll('.touchpad-btn');
+        expect(buttons.length).toBe(10);
+        expect(buttons[9].text()).toBe('10');
+        wrapper.unmount();
+    });
+
     it('fills the first empty field when a touchpad button is clicked', async () => {
         const wrapper = mount(App);
         const inputs = wrapper.findAll('.problem input');
@@ -80,6 +104,26 @@ describe('App.vue', () => {
         wrapper.unmount();
     });
 
+    it('shows session counts without an accuracy fraction', () => {
+        const wrapper = mount(App);
+
+        expect(wrapper.find('.session-counts').exists()).toBe(true);
+        expect(wrapper.find('.solved-count').text()).toBe('Solved: 0');
+        expect(wrapper.find('.tried-count').text()).toBe('Tried: 0');
+        expect(wrapper.find('.progress-area').text()).not.toContain('/');
+        wrapper.unmount();
+    });
+
+    it('lights step 10 when ten problems are solved', async () => {
+        const wrapper = mount(App);
+
+        wrapper.vm.problemsSolved = 10;
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.findAll('.step')[9].classes()).toContain('filled');
+        wrapper.unmount();
+    });
+
     it('shows the settings panel toggle button', () => {
         const wrapper = mount(App);
         // The settings button should be in the header (last button now)
@@ -87,7 +131,8 @@ describe('App.vue', () => {
         expect(headerBtns.length).toBe(6); // How to Use, +, −, Limit, Mute, Settings
         const settingsBtn = headerBtns[headerBtns.length - 1];
         expect(settingsBtn.exists()).toBe(true);
-        expect(settingsBtn.text()).toBe('👤');
+        // The owner asked for the word, not the person icon: the panel is where tasks are set.
+        expect(settingsBtn.text()).toBe('Options');
         wrapper.unmount();
     });
 
@@ -145,12 +190,10 @@ describe('App.vue', () => {
         
         await catBtn.trigger('click'); // select cat
         
-        // The panel should now be closed (because selectMascot closes it)
+        // Picking a mascot no longer dismisses the panel: Options holds task, step and counters too,
+        // so closing on a mascot tap sent the adult back to the game mid-setup.
         await wrapper.vm.$nextTick();
-        expect(wrapper.find('.settings-panel').exists()).toBe(false);
-        
-        // Verify that the mascot was set by checking that the panel was closed
-        // and that the mascot ref was updated
+        expect(wrapper.find('.settings-panel').exists()).toBe(true);
         expect(wrapper.vm.mascot).toBe(catEmoji);
         wrapper.unmount();
     });
@@ -209,6 +252,161 @@ describe('App.vue', () => {
         wrapper.unmount();
     });
 
+    it('reveals the completed equation and highlights the revealed blank', async () => {
+        vi.useFakeTimers();
+        try {
+            const wrapper = mount(App);
+            const inputs = wrapper.findAll('.problem input');
+            const blank = inputs.findIndex((input) => input.element.value === '');
+            const op = wrapper.find('.operator').text() === '+' ? '+' : '-';
+            const [a, b, c] = inputs.map((input) => (input.element.value === '' ? null : Number(input.element.value)));
+            const correct = blank === 0
+                ? (op === '+' ? c - b : c + b)
+                : blank === 1
+                    ? (op === '+' ? c - a : a - c)
+                    : (op === '+' ? a + b : a - b);
+            const wrong = correct === 1 ? 2 : 1;
+
+            await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+            vi.advanceTimersByTime(1500);
+            await wrapper.vm.$nextTick();
+            await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+            await wrapper.vm.$nextTick();
+
+            const revealed = wrapper.findAll('.problem input')[blank];
+            expect(revealed.element.value).toBe(String(correct));
+            expect(revealed.classes()).toContain('reveal-highlight');
+            expect(wrapper.find('#feedback').text()).not.toBe('');
+            wrapper.unmount();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('toggles the how-to-use instructions panel', async () => {
+        const wrapper = mount(App);
+        const instructionsBtn = wrapper.findAll('.header-actions .action-btn')[0];
+
+        expect(wrapper.find('.instructions-panel').exists()).toBe(false);
+        await instructionsBtn.trigger('click');
+        expect(wrapper.find('.instructions-panel').exists()).toBe(true);
+        expect(instructionsBtn.text()).toBe('Close');
+
+        await instructionsBtn.trigger('click');
+        expect(wrapper.find('.instructions-panel').exists()).toBe(false);
+        wrapper.unmount();
+    });
+
+    it('offers every limit preset in the popup', async () => {
+        const wrapper = mount(App);
+        const limitBtn = wrapper.findAll('.header-actions .action-btn')[3];
+        await limitBtn.trigger('click');
+
+        const presets = wrapper.findAll('.limit-preset-btn');
+        expect(presets.map((preset) => preset.text())).toEqual(['5', '10', '15', '20']);
+
+        for (const preset of presets) {
+            await preset.trigger('click');
+            expect(wrapper.find('input[type="number"]').element.value).toBe(preset.text());
+        }
+        wrapper.unmount();
+    });
+
+    it('cancels a limit change without altering the keypad', async () => {
+        const wrapper = mount(App);
+        const limitBtn = wrapper.findAll('.header-actions .action-btn')[3];
+        await limitBtn.trigger('click');
+
+        const input = wrapper.find('input[type="number"]');
+        await input.setValue(20);
+        await wrapper.find('.limit-actions .action-btn:first-child').trigger('click');
+
+        expect(wrapper.find('.limit-popup').exists()).toBe(false);
+        expect(wrapper.findAll('.touchpad-btn').length).toBe(10);
+        wrapper.unmount();
+    });
+
+    it('exposes the header operator computed as a read/write bridge', async () => {
+        const wrapper = mount(App);
+
+        expect(wrapper.vm.headerOperator).toBe('+');
+        wrapper.vm.headerOperator = '-';
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.find('.operator').text()).toBe('−');
+        wrapper.unmount();
+    });
+
+    it('opens the celebration with no pending advance timer or hidden new item', async () => {
+        vi.useFakeTimers();
+        try {
+            const wrapper = mount(App);
+            const vm = wrapper.vm;
+            vm.problemsSolved = 9;
+            vm.totalProblems = 9;
+
+            const { blank, correct } = currentSolution(wrapper);
+            expect(blank).toBeGreaterThanOrEqual(0);
+
+            await wrapper.findAll('.touchpad-btn')[correct - 1].trigger('click');
+            await wrapper.vm.$nextTick();
+
+            expect(vm.celebrationVisible).toBe(true);
+            expect(wrapper.findAll('.step')[9].classes()).toContain('filled');
+            expect(vi.getTimerCount()).toBe(0);
+
+            const before = wrapper.findAll('.problem input').map((input) => input.element.value);
+            vi.advanceTimersByTime(2000);
+            await wrapper.vm.$nextTick();
+            const after = wrapper.findAll('.problem input').map((input) => input.element.value);
+            expect(after).toEqual(before);
+
+            wrapper.unmount();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('celebrates ten answers solved end to end in part mode', async () => {
+        vi.useFakeTimers();
+        try {
+            localStorage.setItem('mathGame.preferences', JSON.stringify({ mode: 'part' }));
+            const wrapper = mount(App);
+            await wrapper.vm.$nextTick();
+            await wrapper.vm.$nextTick();
+
+            expect(wrapper.vm.mode).toBe('part');
+
+            for (let i = 0; i < 10; i++) {
+                const { blank, correct } = currentSolution(wrapper);
+                expect(blank).toBeGreaterThanOrEqual(0);
+                expect(correct).toBeGreaterThanOrEqual(1);
+
+                await wrapper.findAll('.touchpad-btn')[correct - 1].trigger('click');
+                await wrapper.vm.$nextTick();
+
+                expect(wrapper.vm.problemsSolved).toBe(i + 1);
+
+                if (i < 9) {
+                    vi.advanceTimersByTime(2000);
+                    await wrapper.vm.$nextTick();
+                }
+            }
+
+            expect(wrapper.vm.problemsSolved).toBe(10);
+            expect(wrapper.vm.celebrationVisible).toBe(true);
+            expect(wrapper.find('.celebration-overlay').classes('visible')).toBe(true);
+            expect(wrapper.find('.celebration-content').text()).toContain(
+                'You solved 10 problems correctly!'
+            );
+            expect(vi.getTimerCount()).toBe(0);
+
+            wrapper.unmount();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it('shows celebration overlay when reaching 10 solved problems', async () => {
         const wrapper = mount(App);
 
@@ -242,6 +440,114 @@ describe('App.vue', () => {
         // Verify progress reset after timeout
         await new Promise(resolve => setTimeout(resolve, 600));
         expect(vm.problemsSolved).toBe(0);
+        wrapper.unmount();
+    });
+});
+describe('adult panels dismiss themselves', () => {
+    it('closes the Options panel on a pointer-down outside it', async () => {
+        const wrapper = mount(App);
+        await wrapper.find('.options-btn').trigger('click');
+        expect(wrapper.find('.settings-panel').exists()).toBe(true);
+
+        document.dispatchEvent(new Event('pointerdown'));
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.find('.settings-panel').exists()).toBe(false);
+        wrapper.unmount();
+    });
+
+    it('keeps the Options panel open when the pointer-down is inside it', async () => {
+        const wrapper = mount(App);
+        await wrapper.find('.options-btn').trigger('click');
+
+        wrapper.find('.settings-panel').element.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.find('.settings-panel').exists()).toBe(true);
+        wrapper.unmount();
+    });
+
+    it('closes the limit popup on a pointer-down outside it', async () => {
+        const wrapper = mount(App);
+        const limitButton = wrapper.findAll('button').find((b) => b.text().includes('Limit'));
+        await limitButton.trigger('click');
+        expect(wrapper.find('.limit-popup').exists()).toBe(true);
+
+        document.dispatchEvent(new Event('pointerdown'));
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.find('.limit-popup').exists()).toBe(false);
+        wrapper.unmount();
+    });
+
+    it('closes both panels on Escape and ignores other keys', async () => {
+        const wrapper = mount(App);
+        await wrapper.find('.options-btn').trigger('click');
+        const limitButton = wrapper.findAll('button').find((b) => b.text().includes('Limit'));
+        await limitButton.trigger('click');
+        expect(wrapper.find('.settings-panel').exists()).toBe(true);
+        expect(wrapper.find('.limit-popup').exists()).toBe(true);
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('.settings-panel').exists()).toBe(true);
+        expect(wrapper.find('.limit-popup').exists()).toBe(true);
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('.settings-panel').exists()).toBe(false);
+        expect(wrapper.find('.limit-popup').exists()).toBe(false);
+        wrapper.unmount();
+    });
+
+    it('does not close a panel when the pointer-down is on the button that opens it', async () => {
+        const wrapper = mount(App);
+        await wrapper.find('.options-btn').trigger('click');
+
+        // A pointer-down on the toggle must be ignored by the document listener, otherwise the
+        // click that follows re-opens what the pointerdown just closed.
+        wrapper.find('.options-btn').element.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('.settings-panel').exists()).toBe(true);
+
+        const limitButton = wrapper.findAll('button').find((b) => b.text().includes('Limit'));
+        await limitButton.trigger('click');
+        limitButton.element.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+        await wrapper.vm.$nextTick();
+        expect(wrapper.find('.limit-popup').exists()).toBe(true);
+        wrapper.unmount();
+    });
+
+    it('toggles the limit popup shut when its own button is pressed again', async () => {
+        const wrapper = mount(App);
+        const limitButton = wrapper.findAll('button').find((b) => b.text().includes('Limit'));
+
+        await limitButton.trigger('click');
+        expect(wrapper.find('.limit-popup').exists()).toBe(true);
+
+        await limitButton.trigger('click');
+        expect(wrapper.find('.limit-popup').exists()).toBe(false);
+        wrapper.unmount();
+    });
+
+    it('names every task the picker offers in the how-to-use text', async () => {
+        const wrapper = mount(App);
+        await wrapper.find('.options-btn').trigger('click');
+        const labels = wrapper.findAll('.mode-btn').map((b) => b.text());
+        expect(labels.length).toBeGreaterThan(0);
+        await wrapper.find('.options-btn').trigger('click');
+
+        const howTo = wrapper.findAll('button').find((b) => b.text() === 'How to Use');
+        await howTo.trigger('click');
+        const text = wrapper.find('.instructions-panel').text();
+
+        // The copy is the thing the owner asked to be honest, so it is pinned to the picker: adding a
+        // task without documenting it fails here.
+        for (const label of labels) {
+            expect(text).toContain(label);
+        }
+        expect(text.toLowerCase()).toContain('one more try');
+        expect(text.toLowerCase()).toMatch(/ten correct answers|one pass/);
         wrapper.unmount();
     });
 });

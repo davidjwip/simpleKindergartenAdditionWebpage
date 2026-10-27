@@ -1,6 +1,7 @@
 // mathEngine.test.js — unit tests for the pure, framework-free core.
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
+    generateNumbers,
     generateAddition,
     generateSubtraction,
     pickRandomField,
@@ -9,6 +10,35 @@ import {
     testSubtraction,
     testRandomField
 } from '../src/mathEngine';
+
+function expectThrowsWithoutDrawing(generator) {
+    let draws = 0;
+    const random = vi.spyOn(Math, 'random').mockImplementation(() => {
+        draws += 1;
+        if (draws > 20) {
+            throw new Error('generator exceeded its draw budget');
+        }
+        return 0;
+    });
+    try {
+        expect(() => generator(1)).toThrow(RangeError);
+        expect(draws).toBe(0);
+    } finally {
+        random.mockRestore();
+    }
+}
+
+describe('generateNumbers', () => {
+    it('returns two numbers within the requested limit', () => {
+        for (let i = 0; i < 50; i++) {
+            const { num1, num2 } = generateNumbers(10);
+            expect(num1).toBeGreaterThanOrEqual(1);
+            expect(num2).toBeGreaterThanOrEqual(1);
+            expect(num1).toBeLessThanOrEqual(10);
+            expect(num2).toBeLessThanOrEqual(10);
+        }
+    });
+});
 
 describe('generateAddition', () => {
     it('produces a valid addition problem (limit 10)', () => {
@@ -32,6 +62,10 @@ describe('generateAddition', () => {
         expect(testAddition(10, 50).results.length).toBe(50);
         expect(testAddition(20, 50).allPassed).toBe(true);
         expect(testAddition(20, 50).results.length).toBe(50);
+    });
+
+    it('throws for a limit below 2 instead of spinning', () => {
+        expectThrowsWithoutDrawing(generateAddition);
     });
 });
 
@@ -75,6 +109,21 @@ describe('generateSubtraction', () => {
             expect(p.answer).toBeGreaterThanOrEqual(1);
         }
     });
+
+    it('throws for a limit below 2 instead of spinning', () => {
+        expectThrowsWithoutDrawing(generateSubtraction);
+    });
+});
+
+describe('supported number limits', () => {
+    it('generates valid items at every limit from 5 to 20 without hanging', () => {
+        for (let limit = 5; limit <= 20; limit++) {
+            const addition = testAddition(limit, 50);
+            const subtraction = testSubtraction(limit, 50);
+            expect(addition.allPassed).toBe(true);
+            expect(subtraction.allPassed).toBe(true);
+        }
+    });
 });
 
 describe('pickRandomField', () => {
@@ -102,5 +151,20 @@ describe('evaluateAnswer', () => {
         expect(evaluateAnswer(parseInt('', 10), 3, 5, '+')).toBe(null);
         expect(evaluateAnswer(2, 3, parseInt('foo', 10), '+')).toBe(null);
         expect(evaluateAnswer(2, 3, 5, '-')).not.toBe(null);
+    });
+
+    it('returns null when a raw empty string reaches the checker', () => {
+        expect(evaluateAnswer('', 4, 7, '+')).toBe(null);
+        expect(evaluateAnswer(3, '', 7, '+')).toBe(null);
+        expect(evaluateAnswer(3, 4, '', '+')).toBe(null);
+    });
+
+    it('returns null when a missing value reaches the checker', () => {
+        expect(evaluateAnswer(null, 4, 7, '+')).toBe(null);
+        expect(evaluateAnswer(3, null, 7, '+')).toBe(null);
+        expect(evaluateAnswer(3, 4, null, '+')).toBe(null);
+        expect(evaluateAnswer(undefined, 4, 7, '+')).toBe(null);
+        expect(evaluateAnswer(3, undefined, 7, '+')).toBe(null);
+        expect(evaluateAnswer(3, 4, undefined, '+')).toBe(null);
     });
 });
