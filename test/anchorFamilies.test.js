@@ -340,9 +340,9 @@ describe('pass and progress guards', () => {
         expect(gameFields(game)).toEqual(shown);
     });
 
-    it('serves two independently shuffled make-five passes without replaying the first', () => {
-        const seed = Date.UTC(2026, 0, 1);
-        vi.setSystemTime(seed);
+    it('serves two pass-permutations from one continuous stream without replaying across the boundary', () => {
+        // Seeded, so this test is reproducible rather than dependent on the wall clock.
+        const game = useMathGame({ anchorRng: makeRng(4242) });
         game.setModeOption({ mode: 'anchor', anchorTotal: 5, anchorKind: 'bond' });
 
         const seen = [];
@@ -559,5 +559,56 @@ describe('settled round contract', () => {
         );
 
         wrapper.unmount();
+    });
+});
+
+describe('seeded rng: the shuffle is reproducible when the test supplies it', () => {
+    // The flake that failed the release PR came from the composable seeding its rng from the clock.
+    // With an injected rng the order is a fixture, so an exact-order assertion is legitimate.
+    beforeEach(() => {
+        localStorage.clear();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    it('serves exactly the pass the engine builds from the same seed', () => {
+        vi.useFakeTimers();
+        const seed = 7;
+        const seeded = useMathGame({ anchorRng: makeRng(seed) });
+        seeded.setModeOption({ mode: 'anchor', anchorTotal: 5, anchorKind: 'bond' });
+
+        const expectedFirst = buildPass('make-five', makeRng(seed)).map((i) => `${i.num1}+${i.num2}`);
+        const seen = [];
+        for (let i = 0; i < 4; i++) {
+            const item = gameItem(seeded);
+            seen.push(`${item.num1}+${item.num2}`);
+            seeded.fillValue(gameCorrectValue(seeded));
+            vi.advanceTimersByTime(AUTO_ADVANCE);
+        }
+        expect(seen).toEqual(expectedFirst);
+    });
+
+    it('honours each seed independently, compared against the engine rather than against another seed', () => {
+        vi.useFakeTimers();
+        const order = (seed) => {
+            const g = useMathGame({ anchorRng: makeRng(seed) });
+            g.setModeOption({ mode: 'anchor', anchorTotal: 5, anchorKind: 'bond' });
+            const out = [];
+            for (let i = 0; i < 4; i++) {
+                const item = gameItem(g);
+                out.push(`${item.num1}+${item.num2}`);
+                g.fillValue(gameCorrectValue(g));
+                vi.advanceTimersByTime(AUTO_ADVANCE);
+            }
+            return out;
+        };
+        // Each seed is checked against the order its own rng produces. Comparing seed 11 to seed 29
+        // would coincidentally pass or fail 1 time in 24 — the exact defect this increment forbids.
+        for (const seed of [11, 29]) {
+            const fromEngine = buildPass('make-five', makeRng(seed)).map((i) => `${i.num1}+${i.num2}`);
+            expect(order(seed)).toEqual(fromEngine);
+        }
     });
 });

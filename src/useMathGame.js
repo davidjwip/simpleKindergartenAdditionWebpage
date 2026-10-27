@@ -38,7 +38,10 @@ export const ENCOURAGEMENT_MESSAGES = [
 ];
 const START_ADD_ADVISORY = 'This one is take-away only. Choose another task to add.';
 
-export function useMathGame() {
+export function useMathGame(options = {}) {
+    // Tests supply a seeded rng so a shuffle-dependent assertion is deterministic. The app passes
+    // nothing, so production keeps seeding from the clock exactly as before.
+    let anchorRng = options.anchorRng || null;
     // Problem state
     const num1 = ref('');
     const num2 = ref('');
@@ -84,7 +87,6 @@ export function useMathGame() {
     let currentAnchorTotal = null;
     let anchorPass = [];
     let anchorPassIndex = 0;
-    let anchorRng = null;
     let itemStartedAt = 0;
     let firstTapBucketForItem = null;
 
