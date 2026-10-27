@@ -17,20 +17,31 @@ fi
 
 echo "flow: $HEAD (from ${HEAD_REPO:-unknown}) -> $BASE"
 
+# A refusal should be visible as an annotation in the PR, not only buried in the job log.
+refuse() {
+    if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+        echo "::error::$1"
+    else
+        echo "flow REFUSED: $1"
+    fi
+    exit 1
+}
+
 if [ "$BASE" != "main" ]; then
     echo "flow OK: only main has a source rule"
     exit 0
 fi
 
+if [ -z "$HEAD_REPO" ] || [ -z "$THIS_REPO" ]; then
+    refuse "cannot prove where $HEAD came from (HEAD_REPO/THIS_REPO unset); refusing to release to main"
+fi
+
 if [ "$HEAD_REPO" != "$THIS_REPO" ]; then
-    echo "flow REFUSED: main takes releases from this repository's UAT branch, not a fork ($HEAD_REPO)"
-    exit 1
+    refuse "main takes releases from this repository's UAT branch, not a fork ($HEAD_REPO)"
 fi
 
 if [ "$HEAD" != "UAT" ]; then
-    echo "flow REFUSED: main only takes merges from UAT; this PR is $HEAD -> main."
-    echo "Merge into UAT first, then open the release PR from UAT."
-    exit 1
+    refuse "main only takes merges from UAT; this PR is $HEAD -> main. Merge into UAT first, then open the release PR from UAT."
 fi
 
 echo "flow OK: UAT -> main"
