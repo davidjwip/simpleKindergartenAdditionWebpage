@@ -14,6 +14,7 @@ const {
     problemsSolved,
     totalProblems,
     maxLimit,
+    mode,
     streak,
     bestStreak,
     lastResult,
@@ -24,6 +25,7 @@ const {
     fillValue,
     setOperator,
     setMaxLimit: setGameMaxLimit,
+    setMode: setGameMode,
     resetProgress,
     setProgressCallback,
     cancelPendingAdvance
@@ -41,11 +43,16 @@ watch(lastResult, (newVal) => {
 });
 
 // Preferences for personalization
-const { playerName, mascot, maxLimit: prefsMaxLimit, setPlayerName, setMascot, setMaxLimit: setPrefsMaxLimit, MASCOTS } = usePreferences();
+const { playerName, mascot, maxLimit: prefsMaxLimit, mode: prefsMode, setPlayerName, setMascot, setMaxLimit: setPrefsMaxLimit, MASCOTS } = usePreferences();
 
 // Sync maxLimit between preferences and game
 watch(prefsMaxLimit, (newVal) => {
     setGameMaxLimit(newVal);
+});
+
+// Sync the stored task mode into the game. Result-unknown is the default.
+watch(prefsMode, (newVal) => {
+    setGameMode(newVal);
 });
 
 // Initialize game maxLimit from stored pref
@@ -264,11 +271,11 @@ function closeCelebration() {
 
             <div class="problem-area">
                 <div class="problem">
-                    <input type="text" :value="num1" :class="{ 'reveal-highlight': isRevealing && blankField === 0 }" readonly placeholder="?" />
+                    <input type="text" :value="num1" :class="{ 'reveal-highlight': isRevealing && blankField === 'num1' }" readonly placeholder="?" />
                     <span class="operator">{{ opSymbol }}</span>
-                    <input type="text" :value="num2" :class="{ 'reveal-highlight': isRevealing && blankField === 1 }" readonly placeholder="?" />
+                    <input type="text" :value="num2" :class="{ 'reveal-highlight': isRevealing && blankField === 'num2' }" readonly placeholder="?" />
                     <span class="equal-sign">=</span>
-                    <input type="text" :value="answer" :class="{ 'reveal-highlight': isRevealing && blankField === 2 }" readonly placeholder="?" />
+                    <input type="text" :value="answer" :class="{ 'reveal-highlight': isRevealing && blankField === 'answer' }" readonly placeholder="?" />
                 </div>
 
                 <div class="feedback-area">

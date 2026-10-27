@@ -6,6 +6,8 @@ const HOLD_DELAY = 1500;
 const REVEAL_DELAY = 2500;
 const AUTO_ADVANCE = 2000;
 
+const BLANK_FIELDS = ['num1', 'num2', 'answer'];
+
 let game;
 
 function fields() {
@@ -62,6 +64,7 @@ beforeEach(() => {
     vi.useFakeTimers();
     game = useMathGame();
     game.setOperator('+');
+    game.setMode('part');
     game.resetProgress();
 });
 
@@ -183,7 +186,7 @@ describe('wrong retry reveal', () => {
 
         expect(game.problemsSolved.value).toBe(0);
         expect(game.isRevealing.value).toBe(true);
-        expect(game.blankField.value).toBe(solution.blank);
+        expect(game.blankField.value).toBe(BLANK_FIELDS[solution.blank]);
         expect(fields()).toEqual([String(solution.a), String(solution.b), String(solution.c)]);
         expect(game.itemLog.value.at(-1)).toMatchObject({ outcome: 'missed', firstTry: false });
         expect(vi.getTimerCount()).toBe(1);
