@@ -19,6 +19,8 @@ const {
     bestStreak,
     lastResult,
     isLocked,
+    isRevealing,
+    blankField,
     generateNewProblem,
     fillValue,
     setOperator,
@@ -251,11 +253,11 @@ function closeCelebration() {
 
             <div class="problem-area">
                 <div class="problem">
-                    <input type="text" :value="num1" readonly placeholder="?" />
+                    <input type="text" :value="num1" :class="{ 'reveal-highlight': isRevealing && blankField === 0 }" readonly placeholder="?" />
                     <span class="operator">{{ opSymbol }}</span>
-                    <input type="text" :value="num2" readonly placeholder="?" />
+                    <input type="text" :value="num2" :class="{ 'reveal-highlight': isRevealing && blankField === 1 }" readonly placeholder="?" />
                     <span class="equal-sign">=</span>
-                    <input type="text" :value="answer" readonly placeholder="?" />
+                    <input type="text" :value="answer" :class="{ 'reveal-highlight': isRevealing && blankField === 2 }" readonly placeholder="?" />
                 </div>
 
                 <div class="feedback-area">

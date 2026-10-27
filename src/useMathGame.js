@@ -5,7 +5,7 @@
  * entire game logic (including the timer crash-regression behavior) be
  * unit-tested outside a real browser.
  */
-import { ref, computed } from 'vue';
+import { ref, computed, onScopeDispose, getCurrentScope } from 'vue';
 import {
     generateAddition,
     generateSubtraction,
@@ -14,7 +14,17 @@ import {
 } from './mathEngine';
 
 const AUTO_ADVANCE_DELAY = 2000;
-const INCORRECT_RETRY_DELAY = 1500;
+const RETRY_HOLD_DELAY = 1500;
+const REVEAL_DELAY = 2500;
+
+// Message pools for variety
+const CORRECT_MESSAGES = ['Correct! 🎉', 'Great job! ⭐', 'Awesome! 🌟', 'You did it! 💪', 'Super! 🎈'];
+export const ENCOURAGEMENT_MESSAGES = [
+    'Not quite 😊 Look again!',
+    'So close! You’ve got this!',
+    'No worries, take another look!',
+    'Almost there! Keep going!'
+];
 
 export function useMathGame() {
     // Problem state
@@ -37,9 +47,12 @@ export function useMathGame() {
     const bestStreak = ref(0);
     const lastResult = ref(''); // 'correct' | 'incorrect' (for audio feedback)
 
-    // Message pools for variety
-    const CORRECT_MESSAGES = ['Correct! 🎉', 'Great job! ⭐', 'Awesome! 🌟', 'You did it! 💪', 'Super! 🎈'];
-    const ENCOURAGEMENT_MESSAGES = ['Incorrect 😊 Try again!', 'So close! You’ve got this!', 'No worries, have another go!', 'Almost there! Keep going!'];
+    // Wrong-answer state and the per-item outcome log
+    const blankField = ref(null); // 0 = num1, 1 = num2, 2 = answer
+    const isRevealing = ref(false);
+    const itemLog = ref([]);
+    let phase = 'IDLE'; // IDLE | HOLD | RETRY | REVEAL | CORRECT
+    let currentSolution = { num1: 0, num2: 0, answer: 0 };
 
     // Internal timer / generation guard (mirrors the crash fix in the original)
     let touchpadTimer = null;
@@ -66,10 +79,52 @@ export function useMathGame() {
         }
     };
 
+    if (getCurrentScope()) {
+        onScopeDispose(clearTimer);
+    }
+
     const updateProgress = () => {
         if (progressCallback) {
             progressCallback(problemsSolved.value, totalProblems.value);
         }
+    };
+
+    const logItem = (outcome, firstTry) => {
+        itemLog.value.push({ outcome, firstTry });
+    };
+
+    const enterRetry = () => {
+        touchpadTimer = null;
+        phase = 'RETRY';
+        feedback.value = '';
+        lastResult.value = '';
+        if (blankField.value === 0) {
+            num1.value = '';
+        } else if (blankField.value === 1) {
+            num2.value = '';
+        } else {
+            answer.value = '';
+        }
+        isLocked.value = false;
+    };
+
+    const enterReveal = () => {
+        phase = 'REVEAL';
+        isRevealing.value = true;
+        isLocked.value = true;
+        num1.value = String(currentSolution.num1);
+        num2.value = String(currentSolution.num2);
+        answer.value = String(currentSolution.answer);
+        feedbackColor.value = '#4ecdc4';
+        feedback.value = operator.value === '+'
+            ? `${currentSolution.num1} and ${currentSolution.num2} make ${currentSolution.answer}`
+            : `${currentSolution.num1} take away ${currentSolution.num2} makes ${currentSolution.answer}`;
+        logItem('missed', false);
+        clearTimer();
+        touchpadTimer = setTimeout(() => {
+            touchpadTimer = null;
+            generateNewProblem();
+        }, REVEAL_DELAY);
     };
 
     const startTimer = () => {
@@ -90,6 +145,9 @@ export function useMathGame() {
         feedback.value = '';
         lastResult.value = ''; // Reset result for audio re-arming
         isLocked.value = false;
+        isRevealing.value = false;
+        blankField.value = null;
+        phase = 'IDLE';
 
         let problem;
         let currentProblem;
@@ -121,6 +179,13 @@ export function useMathGame() {
                 ? problem.num1 + problem.num2
                 : problem.num1 - problem.num2
         );
+
+        currentSolution = {
+            num1: problem.num1,
+            num2: problem.num2,
+            answer: Number(answerText)
+        };
+        blankField.value = emptyField;
 
         if (emptyField === 0) {
             num1.value = '';
@@ -154,10 +219,13 @@ export function useMathGame() {
     }
 
     function checkAnswer() {
+        if (phase !== 'IDLE' && phase !== 'RETRY') return;
+
         clearTimer();
         const val1 = parseInt(num1.value, 10);
         const val2 = parseInt(num2.value, 10);
         const answerVal = parseInt(answer.value, 10);
+        const wasRetry = phase === 'RETRY';
 
         const isCorrect = evaluateAnswer(val1, val2, answerVal, operator.value);
 
@@ -172,7 +240,7 @@ export function useMathGame() {
             // Use rotating correct message
             feedback.value = CORRECT_MESSAGES[problemsSolved.value % CORRECT_MESSAGES.length];
             problemsSolved.value++;
-            totalProblems.value++;
+            if (!wasRetry) totalProblems.value++;
             
             // Update streak
             streak.value++;
@@ -180,15 +248,17 @@ export function useMathGame() {
                 bestStreak.value = streak.value;
             }
             lastResult.value = 'correct';
+            logItem('correct', !wasRetry);
             
             updateProgress();
             isLocked.value = true;
+            phase = 'CORRECT';
             startTimer();
         } else {
             feedbackColor.value = '#ff6b6b';
             // Use rotating encouragement message
             feedback.value = ENCOURAGEMENT_MESSAGES[totalProblems.value % ENCOURAGEMENT_MESSAGES.length];
-            totalProblems.value++;
+            if (!wasRetry) totalProblems.value++;
             
             // Reset streak on incorrect
             streak.value = 0;
@@ -197,9 +267,13 @@ export function useMathGame() {
             updateProgress();
             clearTimer();
             isLocked.value = true;
-            touchpadTimer = setTimeout(() => {
-                generateNewProblem();
-            }, INCORRECT_RETRY_DELAY);
+
+            if (wasRetry) {
+                enterReveal();
+            } else {
+                phase = 'HOLD';
+                touchpadTimer = setTimeout(enterRetry, RETRY_HOLD_DELAY);
+            }
         }
     }
 
@@ -241,6 +315,9 @@ export function useMathGame() {
         bestStreak,
         lastResult,
         isLocked,
+        isRevealing,
+        blankField,
+        itemLog,
         // actions
         generateNewProblem,
         checkAnswer,

@@ -209,6 +209,91 @@ describe('App.vue', () => {
         wrapper.unmount();
     });
 
+    it('reveals the completed equation and highlights the revealed blank', async () => {
+        vi.useFakeTimers();
+        try {
+            const wrapper = mount(App);
+            const inputs = wrapper.findAll('.problem input');
+            const blank = inputs.findIndex((input) => input.element.value === '');
+            const op = wrapper.find('.operator').text() === '+' ? '+' : '-';
+            const [a, b, c] = inputs.map((input) => (input.element.value === '' ? null : Number(input.element.value)));
+            const correct = blank === 0
+                ? (op === '+' ? c - b : c + b)
+                : blank === 1
+                    ? (op === '+' ? c - a : a - c)
+                    : (op === '+' ? a + b : a - b);
+            const wrong = correct === 1 ? 2 : 1;
+
+            await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+            vi.advanceTimersByTime(1500);
+            await wrapper.vm.$nextTick();
+            await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+            await wrapper.vm.$nextTick();
+
+            const revealed = wrapper.findAll('.problem input')[blank];
+            expect(revealed.element.value).toBe(String(correct));
+            expect(revealed.classes()).toContain('reveal-highlight');
+            expect(wrapper.find('#feedback').text()).not.toBe('');
+            wrapper.unmount();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('toggles the how-to-use instructions panel', async () => {
+        const wrapper = mount(App);
+        const instructionsBtn = wrapper.findAll('.header-actions .action-btn')[0];
+
+        expect(wrapper.find('.instructions-panel').exists()).toBe(false);
+        await instructionsBtn.trigger('click');
+        expect(wrapper.find('.instructions-panel').exists()).toBe(true);
+        expect(instructionsBtn.text()).toBe('Close');
+
+        await instructionsBtn.trigger('click');
+        expect(wrapper.find('.instructions-panel').exists()).toBe(false);
+        wrapper.unmount();
+    });
+
+    it('offers every limit preset in the popup', async () => {
+        const wrapper = mount(App);
+        const limitBtn = wrapper.findAll('.header-actions .action-btn')[3];
+        await limitBtn.trigger('click');
+
+        const presets = wrapper.findAll('.limit-preset-btn');
+        expect(presets.map((preset) => preset.text())).toEqual(['5', '10', '15', '20']);
+
+        for (const preset of presets) {
+            await preset.trigger('click');
+            expect(wrapper.find('input[type="number"]').element.value).toBe(preset.text());
+        }
+        wrapper.unmount();
+    });
+
+    it('cancels a limit change without altering the keypad', async () => {
+        const wrapper = mount(App);
+        const limitBtn = wrapper.findAll('.header-actions .action-btn')[3];
+        await limitBtn.trigger('click');
+
+        const input = wrapper.find('input[type="number"]');
+        await input.setValue(20);
+        await wrapper.find('.limit-actions .action-btn:first-child').trigger('click');
+
+        expect(wrapper.find('.limit-popup').exists()).toBe(false);
+        expect(wrapper.findAll('.touchpad-btn').length).toBe(10);
+        wrapper.unmount();
+    });
+
+    it('exposes the header operator computed as a read/write bridge', async () => {
+        const wrapper = mount(App);
+
+        expect(wrapper.vm.headerOperator).toBe('+');
+        wrapper.vm.headerOperator = '-';
+        await wrapper.vm.$nextTick();
+
+        expect(wrapper.find('.operator').text()).toBe('−');
+        wrapper.unmount();
+    });
+
     it('shows celebration overlay when reaching 10 solved problems', async () => {
         const wrapper = mount(App);
 

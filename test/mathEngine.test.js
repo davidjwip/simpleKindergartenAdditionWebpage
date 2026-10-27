@@ -1,6 +1,7 @@
 // mathEngine.test.js — unit tests for the pure, framework-free core.
 import { describe, it, expect } from 'vitest';
 import {
+    generateNumbers,
     generateAddition,
     generateSubtraction,
     pickRandomField,
@@ -9,6 +10,18 @@ import {
     testSubtraction,
     testRandomField
 } from '../src/mathEngine';
+
+describe('generateNumbers', () => {
+    it('returns two numbers within the requested limit', () => {
+        for (let i = 0; i < 50; i++) {
+            const { num1, num2 } = generateNumbers(10);
+            expect(num1).toBeGreaterThanOrEqual(1);
+            expect(num2).toBeGreaterThanOrEqual(1);
+            expect(num1).toBeLessThanOrEqual(10);
+            expect(num2).toBeLessThanOrEqual(10);
+        }
+    });
+});
 
 describe('generateAddition', () => {
     it('produces a valid addition problem (limit 10)', () => {
@@ -102,5 +115,20 @@ describe('evaluateAnswer', () => {
         expect(evaluateAnswer(parseInt('', 10), 3, 5, '+')).toBe(null);
         expect(evaluateAnswer(2, 3, parseInt('foo', 10), '+')).toBe(null);
         expect(evaluateAnswer(2, 3, 5, '-')).not.toBe(null);
+    });
+
+    it('returns null when a raw empty string reaches the checker', () => {
+        expect(evaluateAnswer('', 4, 7, '+')).toBe(null);
+        expect(evaluateAnswer(3, '', 7, '+')).toBe(null);
+        expect(evaluateAnswer(3, 4, '', '+')).toBe(null);
+    });
+
+    it('returns null when a missing value reaches the checker', () => {
+        expect(evaluateAnswer(null, 4, 7, '+')).toBe(null);
+        expect(evaluateAnswer(3, null, 7, '+')).toBe(null);
+        expect(evaluateAnswer(3, 4, null, '+')).toBe(null);
+        expect(evaluateAnswer(undefined, 4, 7, '+')).toBe(null);
+        expect(evaluateAnswer(3, undefined, 7, '+')).toBe(null);
+        expect(evaluateAnswer(3, 4, undefined, '+')).toBe(null);
     });
 });
