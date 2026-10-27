@@ -16,6 +16,7 @@ concurrency:
 jobs:
   gates:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,20 +43,17 @@ jobs:
     # Only main has a source rule, so only PRs targeting main pay for this job.
     if: github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The decision lives in a shell script so it can be unit-tested (test/branchFlow.test.js)
+      # instead of being asserted only by reading YAML.
       - name: main only accepts UAT, from this repository
         env:
+          BASE: ${{ github.event.pull_request.base.ref }}
           HEAD: ${{ github.event.pull_request.head.ref }}
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           THIS_REPO: ${{ github.repository }}
-        run: |
-          echo "flow: $HEAD (from $HEAD_REPO) -> main"
-          if [ "$HEAD_REPO" != "$THIS_REPO" ]; then
-            echo "::error::main takes releases from this repository's UAT branch, not a fork."
-            exit 1
-          fi
-          if [ "$HEAD" != "UAT" ]; then
-            echo "::error::main only takes merges from UAT; this PR is $HEAD -> main. Merge into UAT first, then release from UAT."
-            exit 1
-          fi
-          echo "flow OK"
+        run: bash scripts/check-branch-flow.sh
