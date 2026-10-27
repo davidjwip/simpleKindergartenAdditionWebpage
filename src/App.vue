@@ -5,6 +5,7 @@ import { useAudioFeedback } from './useAudioFeedback';
 import { usePreferences } from './usePreferences';
 import { STEPS } from './mathEngine';
 import NumberFrame from './components/NumberFrame.vue';
+import DotRow from './components/DotRow.vue';
 
 const {
     num1,
@@ -28,6 +29,7 @@ const {
     isLocked,
     isRevealing,
     isAnchor,
+    partWhole,
     blankField,
     generateNewProblem,
     fillValue,
@@ -57,6 +59,7 @@ const { playerName, mascot, maxLimit: prefsMaxLimit, mode: prefsMode, step: pref
 
 const MODE_OPTIONS = [
     { id: 'result', label: 'Find the total' },
+    { id: 'part', label: 'Find the missing part' },
     { id: 'anchor', label: 'Make 10' }
 ];
 
@@ -353,6 +356,13 @@ function closeCelebration() {
                     v-if="isAnchor"
                     :total="anchorTotal"
                     :filled="frameFilled"
+                    :revealed="isRevealing"
+                />
+
+                <DotRow
+                    v-if="mode === 'part' && partWhole"
+                    :total="partWhole.total"
+                    :known="partWhole.known"
                     :revealed="isRevealing"
                 />
 

@@ -106,6 +106,27 @@ export function useMathGame() {
 
     const isAdd = computed(() => operator.value === '+');
 
+    const partWhole = computed(() => {
+        if (mode.value !== 'part') return null;
+
+        const total = Number(operator.value === '+' ? answer.value : num1.value);
+        const known = Number(
+            operator.value === '+' && blankField.value === 'num1' ? num2.value
+                : operator.value === '+' ? num1.value
+                    : answer.value
+        );
+        const safeTotal = Number.isFinite(total) ? Math.max(0, total) : 0;
+        const safeKnown = Number.isFinite(known)
+            ? Math.min(Math.max(0, known), safeTotal)
+            : 0;
+
+        return {
+            total: safeTotal,
+            known: safeKnown,
+            missing: safeTotal - safeKnown
+        };
+    });
+
     const clearTimer = () => {
         if (touchpadTimer) {
             clearTimeout(touchpadTimer);
@@ -428,6 +449,7 @@ export function useMathGame() {
         totalProblems,
         progressPercent,
         isAdd,
+        partWhole,
         maxLimit,
         mode,
         step,
