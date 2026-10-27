@@ -127,6 +127,18 @@ main {
     border-radius: 10px;
 }
 
+.numeral-counters {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    max-width: 100%;
+}
+
+.numeral-counter {
+    margin: 8px auto;
+}
+
 .dot {
     width: 32px;
     height: 32px;
@@ -475,6 +487,22 @@ main {
     border-color: #4ecdc4;
     color: #fff;
     box-shadow: 0 4px 10px rgba(78, 205, 196, 0.4);
+}
+
+.counters-toggle label {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+    color: #555;
+    cursor: pointer;
+}
+
+.counters-toggle input {
+    width: 22px;
+    height: 22px;
+    accent-color: #4ecdc4;
+    cursor: pointer;
 }
 
 .mode-picker {
