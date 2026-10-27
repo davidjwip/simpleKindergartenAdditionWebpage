@@ -8,8 +8,9 @@ export default defineConfig({
     base: './',
     test: {
         environment: 'happy-dom',
-        // Randomise test order so a test cannot quietly depend on another having run first. The
-        // seed is printed on failure, so any order-dependent test is reproducible from the log.
+        // Randomise test order so a test cannot quietly depend on another having run first. Vitest
+        // prints `Running tests with seed "<n>"` at the start of every run, so an order-dependent
+        // failure is reproducible with --sequence.seed=<n>.
         sequence: {
             shuffle: true
         },

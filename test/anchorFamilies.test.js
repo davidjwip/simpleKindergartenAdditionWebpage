@@ -340,7 +340,7 @@ describe('pass and progress guards', () => {
         expect(gameFields(game)).toEqual(shown);
     });
 
-    it('serves two independently shuffled make-five passes without replaying the first', () => {
+    it('serves two pass-permutations from one continuous stream without replaying across the boundary', () => {
         // Seeded, so this test is reproducible rather than dependent on the wall clock.
         const game = useMathGame({ anchorRng: makeRng(4242) });
         game.setModeOption({ mode: 'anchor', anchorTotal: 5, anchorKind: 'bond' });
@@ -565,7 +565,6 @@ describe('settled round contract', () => {
 describe('seeded rng: the shuffle is reproducible when the test supplies it', () => {
     // The flake that failed the release PR came from the composable seeding its rng from the clock.
     // With an injected rng the order is a fixture, so an exact-order assertion is legitimate.
-    let seeded;
     beforeEach(() => {
         localStorage.clear();
     });
@@ -577,7 +576,7 @@ describe('seeded rng: the shuffle is reproducible when the test supplies it', ()
     it('serves exactly the pass the engine builds from the same seed', () => {
         vi.useFakeTimers();
         const seed = 7;
-        seeded = useMathGame({ anchorRng: makeRng(seed) });
+        const seeded = useMathGame({ anchorRng: makeRng(seed) });
         seeded.setModeOption({ mode: 'anchor', anchorTotal: 5, anchorKind: 'bond' });
 
         const expectedFirst = buildPass('make-five', makeRng(seed)).map((i) => `${i.num1}+${i.num2}`);
