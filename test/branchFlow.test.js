@@ -41,6 +41,28 @@ describe('check-branch-flow.sh', () => {
         expect(r.stdout).toContain('not a fork');
     });
 
+    it('refuses when either repository field is missing', () => {
+        const cases = [
+            { label: 'both unset', env: { HEAD_REPO: '', THIS_REPO: '' } },
+            { label: 'THIS_REPO unset', env: { HEAD_REPO: REPO, THIS_REPO: '' } },
+            { label: 'HEAD_REPO unset', env: { HEAD_REPO: '', THIS_REPO: REPO } },
+        ];
+        for (const { label, env } of cases) {
+            const r = run({ BASE: 'main', HEAD: 'UAT', ...env });
+            expect(r.status, label).toBe(1);
+            expect(r.stdout, label).toContain('cannot prove where');
+        }
+    });
+
+    it('annotates a refusal for the PR when running in Actions', () => {
+        // Both repository fields are set, so this reaches the source-branch refusal rather than
+        // the provenance one — otherwise the test would pass for the wrong reason.
+        const r = run({ BASE: 'main', HEAD: 'feat/x', HEAD_REPO: REPO, THIS_REPO: REPO, GITHUB_ACTIONS: 'true' });
+        expect(r.status).toBe(1);
+        expect(r.stdout).toContain('::error::');
+        expect(r.stdout).toContain('main only takes merges from UAT');
+    });
+
     it('refuses to guess when BASE or HEAD is missing', () => {
         expect(run({ BASE: 'main' }).status).toBe(2);
         expect(run({ HEAD: 'UAT' }).status).toBe(2);
