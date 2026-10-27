@@ -368,6 +368,46 @@ describe('App.vue', () => {
         }
     });
 
+    it('celebrates ten answers solved end to end in part mode', async () => {
+        vi.useFakeTimers();
+        try {
+            localStorage.setItem('mathGame.preferences', JSON.stringify({ mode: 'part' }));
+            const wrapper = mount(App);
+            await wrapper.vm.$nextTick();
+            await wrapper.vm.$nextTick();
+
+            expect(wrapper.vm.mode).toBe('part');
+
+            for (let i = 0; i < 10; i++) {
+                const { blank, correct } = currentSolution(wrapper);
+                expect(blank).toBeGreaterThanOrEqual(0);
+                expect(correct).toBeGreaterThanOrEqual(1);
+
+                await wrapper.findAll('.touchpad-btn')[correct - 1].trigger('click');
+                await wrapper.vm.$nextTick();
+
+                expect(wrapper.vm.problemsSolved).toBe(i + 1);
+
+                if (i < 9) {
+                    vi.advanceTimersByTime(2000);
+                    await wrapper.vm.$nextTick();
+                }
+            }
+
+            expect(wrapper.vm.problemsSolved).toBe(10);
+            expect(wrapper.vm.celebrationVisible).toBe(true);
+            expect(wrapper.find('.celebration-overlay').classes('visible')).toBe(true);
+            expect(wrapper.find('.celebration-content').text()).toContain(
+                'You solved 10 problems correctly!'
+            );
+            expect(vi.getTimerCount()).toBe(0);
+
+            wrapper.unmount();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it('shows celebration overlay when reaching 10 solved problems', async () => {
         const wrapper = mount(App);
 

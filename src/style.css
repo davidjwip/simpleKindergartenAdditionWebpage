@@ -113,6 +113,37 @@ main {
     border: 2px dashed #2f9e94;
 }
 
+.dot-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    width: fit-content;
+    max-width: 100%;
+    margin: 12px auto;
+    padding: 10px;
+    background-color: #fff9c4;
+    border: 3px solid #4ecdc4;
+    border-radius: 10px;
+}
+
+.dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    box-sizing: border-box;
+}
+
+.dot.filled {
+    background-color: #4ecdc4;
+    border: 2px solid #4ecdc4;
+}
+
+.dot.gap {
+    background-color: #fff;
+    border: 2px dashed #2f9e94;
+}
+
 .anchor-summary {
     margin-top: 10px;
     color: #555;
