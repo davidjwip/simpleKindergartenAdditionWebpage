@@ -350,23 +350,19 @@ describe('App anchor mode', () => {
         wrapper.unmount();
     });
 
-    it('renders the frame with the shown part filled and the answer cells empty', async () => {
+    it('renders the frame with the known part filled and the answer cells empty', async () => {
         const wrapper = await mountApp({ mode: 'anchor', maxLimit: 5 });
 
-        for (const blankField of ['num1', 'num2']) {
-            let inputs = problemInputs(wrapper);
-            for (let i = 0; i < 20 && inputs[blankField === 'num1' ? 0 : 1].element.value !== ''; i++) {
-                wrapper.vm.generateNewProblem();
-                await wrapper.vm.$nextTick();
-                inputs = problemInputs(wrapper);
-            }
+        // This used to loop over both blank fields because a bond could blank either operand. Bonds
+        // now always blank the second part — every part is asked exactly once across a pass — so the
+        // first part is the one the frame fills, on every item.
+        const inputs = problemInputs(wrapper);
+        const known = Number(inputs[0].element.value);
+        const total = Number(inputs[2].element.value);
 
-            const shown = Number(inputs[blankField === 'num1' ? 1 : 0].element.value);
-            const total = Number(inputs[2].element.value);
-            expect(wrapper.findAll('.frame-cell')).toHaveLength(10);
-            expect(wrapper.findAll('.frame-cell.filled')).toHaveLength(shown);
-            expect(wrapper.findAll('.frame-cell.empty')).toHaveLength(total - shown);
-        }
+        expect(wrapper.findAll('.frame-cell')).toHaveLength(10);
+        expect(wrapper.findAll('.frame-cell.filled')).toHaveLength(known);
+        expect(wrapper.findAll('.frame-cell.empty')).toHaveLength(total - known);
 
         wrapper.unmount();
     });

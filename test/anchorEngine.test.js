@@ -55,21 +55,17 @@ describe('buildPass for make-ten', () => {
         expect(new Set(itemKeys(pass)).size).toBe(9);
     });
 
-    it('assigns the blank to the larger operand, with 5+5 blanking num2', () => {
+    it('blanks the second part of every pair, so each part is asked once', () => {
         const pass = buildPass(TOTAL, makeRng(11));
 
-        const num1Blanks = pass.filter((item) => item.blankField === 'num1');
-        const num2Blanks = pass.filter((item) => item.blankField === 'num2');
-        const fiveFive = pass.find((item) => item.num1 === 5 && item.num2 === 5);
-
-        expect(num1Blanks).toHaveLength(4);
-        expect(num2Blanks).toHaveLength(5);
-        expect(fiveFive.blankField).toBe('num2');
-
+        // The rule this replaces blanked the larger part, which asked 4,3,3,4 in make-five and 2,2 in
+        // make-three: a small part was never an answer and the smallest family had one answer only.
         for (const item of pass) {
-            const largerField = item.num1 > item.num2 ? 'num1' : 'num2';
-            expect(item.blankField).toBe(largerField);
+            expect(item.blankField, `${item.num1}+${item.num2}`).toBe('num2');
         }
+
+        const asked = pass.map((item) => item.num2).sort((a, b) => a - b);
+        expect(asked).toEqual(Array.from({ length: TOTAL - 1 }, (_, index) => index + 1));
     });
 
     it('keeps every item a valid addition to the family total with no zero', () => {
@@ -112,13 +108,15 @@ describe('anchor totals 3 and 4', () => {
         expect(roundLengthForTotal(10)).toBe(9);
     });
 
-    it('AC2 a make-three pass is both ordered pairs, blanked on the larger operand', () => {
+    it('AC2 a make-three pass is both ordered pairs, both blanking the second part', () => {
         const pass = buildPass(3, makeRng(7));
 
         expect(pass).toHaveLength(2);
         expect(itemKeys(pass)).toEqual(['1+2', '2+1'].sort());
 
         const byPair = new Map(pass.map((item) => [`${item.num1}+${item.num2}`, item]));
+        // Both pairs blank the second part: with only two pairs, blanking the larger part in both
+        // would ask 2 twice and the answer would never be 1 (see AC9).
         expect(byPair.get('1+2')).toMatchObject({
             answer: 3,
             blankField: 'num2',
@@ -126,9 +124,31 @@ describe('anchor totals 3 and 4', () => {
         });
         expect(byPair.get('2+1')).toMatchObject({
             answer: 3,
-            blankField: 'num1',
+            blankField: 'num2',
             kind: 'bond'
         });
+    });
+
+    it('AC9 a make-three pass asks for both parts, so the answer is not always two', () => {
+        // The defect this pins: blanking the larger part in both pairs asked `1 + ? = 3` and
+        // `? + 1 = 3`, i.e. 2 twice, and one key cleared the whole family.
+        const pass = buildPass(3, makeRng(11));
+        const asked = pass.map((item) => (item.blankField === 'num1' ? item.num1 : item.num2));
+
+        expect(asked.slice().sort()).toEqual([1, 2]);
+        expect(pass.every((item) => item.blankField === 'num2')).toBe(true);
+    });
+
+    it('AC10 every family asks each part exactly once', () => {
+        // The same property at every total, so the rule cannot be right for three and wrong for ten.
+        for (const total of [3, 4, 5, 10]) {
+            const asked = buildPass(total, makeRng(3))
+                .map((item) => item.num2)
+                .sort((a, b) => a - b);
+            expect(asked, `total ${total}`).toEqual(
+                Array.from({ length: total - 1 }, (_, index) => index + 1)
+            );
+        }
     });
 
     it('AC3 a make-four pass is its three ordered pairs', () => {
@@ -140,7 +160,7 @@ describe('anchor totals 3 and 4', () => {
         const byPair = new Map(pass.map((item) => [`${item.num1}+${item.num2}`, item]));
         expect(byPair.get('1+3')).toMatchObject({ answer: 4, blankField: 'num2', kind: 'bond' });
         expect(byPair.get('2+2')).toMatchObject({ answer: 4, blankField: 'num2', kind: 'bond' });
-        expect(byPair.get('3+1')).toMatchObject({ answer: 4, blankField: 'num1', kind: 'bond' });
+        expect(byPair.get('3+1')).toMatchObject({ answer: 4, blankField: 'num2', kind: 'bond' });
     });
 });
 
@@ -158,9 +178,9 @@ describe('generateBond', () => {
         });
     });
 
-    it('derives the blank field from the larger operand when omitted', () => {
+    it('derives the second part as the blank when none is given', () => {
         expect(generateBond(TOTAL, undefined, 2).blankField).toBe('num2');
-        expect(generateBond(TOTAL, undefined, 8).blankField).toBe('num1');
+        expect(generateBond(TOTAL, undefined, 8).blankField).toBe('num2');
     });
 
     it('draws a valid pair from the supplied rng when the first operand is omitted', () => {

@@ -43,10 +43,6 @@ function pairsFor(total) {
     return pairs;
 }
 
-function blankFieldForPair(num1, num2) {
-    return num1 > num2 ? 'num1' : 'num2';
-}
-
 function shuffle(items, rng) {
     const shuffled = [...items];
     for (let index = shuffled.length - 1; index > 0; index--) {
@@ -88,7 +84,7 @@ export function generateBond(total, blankField, num1, rng = Math.random) {
         num2,
         answer: resolvedTotal,
         operator: '+',
-        blankField: blankField == null ? blankFieldForPair(chosenNum1, num2) : blankField,
+        blankField: blankField == null ? 'num2' : blankField,
         kind: 'bond'
     };
 }
@@ -117,7 +113,12 @@ export function buildPass(family, rng = Math.random) {
         );
     }
     const total = numericTotal(family);
+    // The blank is always the SECOND part. The pairs run num1 = 1 … total-1, so num2 runs
+    // total-1 … 1 and the pass asks every part exactly once: `1 + ? = 5` (4) … `4 + ? = 5` (1).
+    // Blanking the larger part instead — the rule this replaces — asked 4,3,3,4 in make-five and
+    // 2,2 in make-three, so a small part was never an answer and the smallest families could be
+    // cleared by pressing one key (Dave, on the UAT build, 2026-10-29).
     return shuffle(pairsFor(total), rng).map(({ num1, num2 }) => (
-        generateBond(total, blankFieldForPair(num1, num2), num1, rng)
+        generateBond(total, 'num2', num1, rng)
     ));
 }

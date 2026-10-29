@@ -25,13 +25,15 @@ are the same shape as make-five and make-ten at smaller totals — **a total ext
 | ID | Given | When | Then |
 |---|---|---|---|
 | AC1 | the engine | `roundLengthForTotal` is asked for 3, 4, 5 and 10 | it answers 4, 6, 8 and 9 |
-| AC2 | a make-3 bond family | a pass is built | it is the two ordered pairs (1,2) and (2,1), each once, blank on the larger operand |
+| AC2 | a make-3 bond family | a pass is built | it is the two ordered pairs (1,2) and (2,1), each once, both blanking the second part |
 | AC3 | a make-4 bond family | a pass is built | it is the three ordered pairs (1,3), (2,2), (3,1), each once |
 | AC4 | a make-3 round played to the goal | the items are read in order | no item repeats back-to-back across the pass boundary, over a seeded round |
 | AC5 | anchor mode, bond kind | the keypad length is read at totals 3, 4, 5, 10 | it is 3, 4, 5, 10; with doubles selected it is 10 regardless of the stored total |
 | AC6 | the options panel | it is rendered | the five anchor entries appear in the order Make 3, Make 4, Make 5, Make 10, Doubles |
 | AC7 | a stored preference of 3 or 4 | preferences are loaded | the total survives; an unsupported stored value (e.g. 7) falls back to 10 |
 | AC8 | anchor mode at totals 3 and 4 | the frame is rendered | it carries that total, one row, and as many cells as the total |
+| AC9 | a make-3 pass | the parts it asks for are read | they are 2 and 1 — the answer is not the same number every time |
+| AC10 | any bond family at 3, 4, 5 and 10 | its pass is read | it asks every part 1 … total-1 exactly once |
 
 ## 3. Out of scope
 
@@ -46,6 +48,12 @@ are the same shape as make-five and make-ten at smaller totals — **a total ext
   tests do not learn a new vocabulary.
 - **Two passes under 10, one pass at 10.** This is the existing rule read honestly: make-five already
   doubles up because four pairs is a short round, so 2-pair and 3-pair families double up too.
+- **The blank is always the second part, at every total.** Traced from Dave's two observations on the
+  UAT build — "Make 3: the answer is always 2", then "Make 4: 1 is never an answer" — the old rule
+  (blank the larger part) asked 4,3,3,4 in make-five and 2,2 in make-three. It is a family-coverage
+  defect, not a small-family quirk, so the rule changed once for all totals rather than gaining an
+  exception at 3 and 4: blanking `num2` makes the pass ask 1 … total-1 exactly once, and the known
+  part still reads first (`1 + ? = 5`). `anchor-facts.md` §3 carries the amended rule.
 - **Ascending picker.** The child's progression is small to large and the adult is picking what he can
   do today; a descending list starts the eye at the hardest one.
 
@@ -61,3 +69,5 @@ are the same shape as make-five and make-ten at smaller totals — **a total ext
 | AC6 | `test/App.test.js` | `AC6 the anchor entries are listed ascending` | pending |
 | AC7 | `test/usePreferences.test.js` | `AC7 a stored total of three or four survives, an unsupported one falls back to ten` | pending |
 | AC8 | `test/anchorFamilies.test.js` | `AC8 the frame draws one row at totals three and four` | green |
+| AC9 | `test/anchorEngine.test.js` | `AC9 a make-three pass asks for both parts, so the answer is not always two` | green |
+| AC10 | `test/anchorEngine.test.js` | `AC10 make-five and make-ten still blank the larger part` | green |

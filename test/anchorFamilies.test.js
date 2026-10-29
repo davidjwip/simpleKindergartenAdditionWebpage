@@ -152,15 +152,15 @@ describe('anchor family lengths', () => {
         expect(() => trackLengthForTotal('make-seven')).toThrow(RangeError);
     });
 
-    it('builds a four-item make-five pass with the 2/2 blank split', () => {
+    it('builds a four-item make-five pass that asks all four parts', () => {
         const pass = buildPass('make-five', makeRng(3));
 
         expect(pass).toHaveLength(4);
         expect(pass.map((item) => `${item.num1}+${item.num2}`).sort()).toEqual([
             '1+4', '2+3', '3+2', '4+1'
         ]);
-        expect(pass.filter((item) => item.blankField === 'num1')).toHaveLength(2);
-        expect(pass.filter((item) => item.blankField === 'num2')).toHaveLength(2);
+        expect(pass.filter((item) => item.blankField === 'num1')).toHaveLength(0);
+        expect(pass.map((item) => item.num2).sort()).toEqual([1, 2, 3, 4]);
         for (const item of pass) {
             expect(item.answer).toBe(5);
             expect(item.kind).toBe('bond');
