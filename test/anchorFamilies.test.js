@@ -152,15 +152,15 @@ describe('anchor family lengths', () => {
         expect(() => trackLengthForTotal('make-seven')).toThrow(RangeError);
     });
 
-    it('builds a four-item make-five pass with the 2/2 blank split', () => {
+    it('builds a four-item make-five pass that asks all four parts', () => {
         const pass = buildPass('make-five', makeRng(3));
 
         expect(pass).toHaveLength(4);
         expect(pass.map((item) => `${item.num1}+${item.num2}`).sort()).toEqual([
             '1+4', '2+3', '3+2', '4+1'
         ]);
-        expect(pass.filter((item) => item.blankField === 'num1')).toHaveLength(2);
-        expect(pass.filter((item) => item.blankField === 'num2')).toHaveLength(2);
+        expect(pass.filter((item) => item.blankField === 'num1')).toHaveLength(0);
+        expect(pass.map((item) => item.num2).sort()).toEqual([1, 2, 3, 4]);
         for (const item of pass) {
             expect(item.answer).toBe(5);
             expect(item.kind).toBe('bond');
@@ -223,6 +223,21 @@ describe('anchor family selection in the game', () => {
         expect(game.roundLength.value).toBe(8);
         expect(game.keypadLength.value).toBe(5);
         expect(game.frameKind.value).toBe('bond');
+    });
+
+    it('AC5 keypad length is the total for bonds and ten for doubles', () => {
+        game.setMode('anchor');
+
+        for (const total of [3, 4, 5, 10]) {
+            game.setModeOption({ mode: 'anchor', anchorTotal: total, anchorKind: 'bond' });
+
+            expect(game.anchorTotal.value).toBe(total);
+            expect(game.keypadLength.value).toBe(total);
+        }
+
+        game.setModeOption({ mode: 'anchor', anchorTotal: 4, anchorKind: 'doubles' });
+
+        expect(game.keypadLength.value).toBe(10);
     });
 
     it('stores a family while another mode is active without regenerating it', () => {
@@ -340,6 +355,30 @@ describe('pass and progress guards', () => {
         expect(gameFields(game)).toEqual(shown);
     });
 
+    it('AC4 a make-three round never repeats an item back-to-back', () => {
+        // Both pass orders are possible, so some seeds put the first pass's tail at the head of the
+        // second pass unless the boundary swap runs. Checking a spread of seeds makes deleting that
+        // swap fail rather than passing by a lucky fixture.
+        for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+            const makeThree = useMathGame({ anchorRng: makeRng(seed) });
+            makeThree.setOperator('+');
+            makeThree.setModeOption({ mode: 'anchor', anchorTotal: 3, anchorKind: 'bond' });
+
+            expect(makeThree.roundLength.value).toBe(4);
+
+            const seen = [];
+            for (let i = 0; i < 4; i++) {
+                seen.push(`${gameItem(makeThree).num1}+${gameItem(makeThree).num2}`);
+                makeThree.fillValue(gameCorrectValue(makeThree));
+                vi.advanceTimersByTime(AUTO_ADVANCE);
+            }
+
+            for (let i = 1; i < seen.length; i++) {
+                expect(seen[i]).not.toBe(seen[i - 1]);
+            }
+        }
+    });
+
     it('serves two pass-permutations from one continuous stream without replaying across the boundary', () => {
         // Seeded, so this test is reproducible rather than dependent on the wall clock.
         const game = useMathGame({ anchorRng: makeRng(4242) });
@@ -377,6 +416,25 @@ describe('settled round contract', () => {
 
     afterEach(() => {
         vi.useRealTimers();
+    });
+
+    it('AC8 the frame draws one row at totals three and four', async () => {
+        // B6 promises a single row for every total at or below five, so asserting only total 3 would
+        // leave a renderer that special-cased one of them, or stepped its rows by anything but five.
+        for (const total of [3, 4]) {
+            const wrapper = await mountApp({
+                mode: 'anchor',
+                anchorTotal: total,
+                anchorKind: 'bond'
+            });
+
+            expect(wrapper.vm.anchorTotal).toBe(total);
+            expect(wrapper.find('.number-frame').attributes('data-total')).toBe(String(total));
+            expect(wrapper.findAll('.frame-row')).toHaveLength(1);
+            expect(wrapper.findAll('.frame-cell')).toHaveLength(total);
+
+            wrapper.unmount();
+        }
     });
 
     it('celebrates exactly once at the eighth make-five item despite two misses', async () => {
