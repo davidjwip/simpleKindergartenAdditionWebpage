@@ -225,6 +225,21 @@ describe('anchor family selection in the game', () => {
         expect(game.frameKind.value).toBe('bond');
     });
 
+    it('AC5 keypad length is the total for bonds and ten for doubles', () => {
+        game.setMode('anchor');
+
+        for (const total of [3, 4, 5, 10]) {
+            game.setModeOption({ mode: 'anchor', anchorTotal: total, anchorKind: 'bond' });
+
+            expect(game.anchorTotal.value).toBe(total);
+            expect(game.keypadLength.value).toBe(total);
+        }
+
+        game.setModeOption({ mode: 'anchor', anchorTotal: 4, anchorKind: 'doubles' });
+
+        expect(game.keypadLength.value).toBe(10);
+    });
+
     it('stores a family while another mode is active without regenerating it', () => {
         game.setMode('result');
         const before = [game.num1.value, game.num2.value, game.answer.value];
@@ -340,6 +355,30 @@ describe('pass and progress guards', () => {
         expect(gameFields(game)).toEqual(shown);
     });
 
+    it('AC4 a make-three round never repeats an item back-to-back', () => {
+        // Both pass orders are possible, so some seeds put the first pass's tail at the head of the
+        // second pass unless the boundary swap runs. Checking a spread of seeds makes deleting that
+        // swap fail rather than passing by a lucky fixture.
+        for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+            const makeThree = useMathGame({ anchorRng: makeRng(seed) });
+            makeThree.setOperator('+');
+            makeThree.setModeOption({ mode: 'anchor', anchorTotal: 3, anchorKind: 'bond' });
+
+            expect(makeThree.roundLength.value).toBe(4);
+
+            const seen = [];
+            for (let i = 0; i < 4; i++) {
+                seen.push(`${gameItem(makeThree).num1}+${gameItem(makeThree).num2}`);
+                makeThree.fillValue(gameCorrectValue(makeThree));
+                vi.advanceTimersByTime(AUTO_ADVANCE);
+            }
+
+            for (let i = 1; i < seen.length; i++) {
+                expect(seen[i]).not.toBe(seen[i - 1]);
+            }
+        }
+    });
+
     it('serves two pass-permutations from one continuous stream without replaying across the boundary', () => {
         // Seeded, so this test is reproducible rather than dependent on the wall clock.
         const game = useMathGame({ anchorRng: makeRng(4242) });
@@ -377,6 +416,21 @@ describe('settled round contract', () => {
 
     afterEach(() => {
         vi.useRealTimers();
+    });
+
+    it('AC8 the frame draws one row of three cells at total three', async () => {
+        const wrapper = await mountApp({
+            mode: 'anchor',
+            anchorTotal: 3,
+            anchorKind: 'bond'
+        });
+
+        expect(wrapper.vm.anchorTotal).toBe(3);
+        expect(wrapper.find('.number-frame').attributes('data-total')).toBe('3');
+        expect(wrapper.findAll('.frame-row')).toHaveLength(1);
+        expect(wrapper.findAll('.frame-cell')).toHaveLength(3);
+
+        wrapper.unmount();
     });
 
     it('celebrates exactly once at the eighth make-five item despite two misses', async () => {

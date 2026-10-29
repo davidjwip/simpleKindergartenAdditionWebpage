@@ -1,6 +1,11 @@
 // anchorEngine.test.js — Increment 3c-1: make-ten passes and their blank rule.
 import { describe, it, expect } from 'vitest';
-import { buildPass, generateBond, makeRng } from '../src/anchorEngine';
+import {
+    buildPass,
+    generateBond,
+    makeRng,
+    roundLengthForTotal
+} from '../src/anchorEngine';
 
 const TOTAL = 10;
 
@@ -96,6 +101,47 @@ describe('buildPass for make-ten', () => {
 
     it('rejects a family whose total is not a supported anchor', () => {
         expect(() => buildPass(7, makeRng(1))).toThrow(RangeError);
+    });
+});
+
+describe('anchor totals 3 and 4', () => {
+    it('AC1 round length doubles short families and leaves make-ten alone', () => {
+        expect(roundLengthForTotal(3)).toBe(4);
+        expect(roundLengthForTotal(4)).toBe(6);
+        expect(roundLengthForTotal(5)).toBe(8);
+        expect(roundLengthForTotal(10)).toBe(9);
+    });
+
+    it('AC2 a make-three pass is both ordered pairs, blanked on the larger operand', () => {
+        const pass = buildPass(3, makeRng(7));
+
+        expect(pass).toHaveLength(2);
+        expect(itemKeys(pass)).toEqual(['1+2', '2+1'].sort());
+
+        const byPair = new Map(pass.map((item) => [`${item.num1}+${item.num2}`, item]));
+        expect(byPair.get('1+2')).toMatchObject({
+            answer: 3,
+            blankField: 'num2',
+            kind: 'bond'
+        });
+        expect(byPair.get('2+1')).toMatchObject({
+            answer: 3,
+            blankField: 'num1',
+            kind: 'bond'
+        });
+    });
+
+    it('AC3 a make-four pass is its three ordered pairs', () => {
+        const pass = buildPass(4, makeRng(7));
+
+        expect(pass).toHaveLength(3);
+        expect(itemKeys(pass)).toEqual(['1+3', '2+2', '3+1'].sort());
+
+        for (const item of pass) {
+            expect(item.answer).toBe(4);
+            expect(item.num1 + item.num2).toBe(4);
+            expect(item.kind).toBe('bond');
+        }
     });
 });
 
