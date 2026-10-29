@@ -61,13 +61,13 @@ are the same shape as make-five and make-ten at smaller totals — **a total ext
 
 | Criterion | Test file | Test name | Status |
 |---|---|---|---|
-| AC1 | `test/anchorEngine.test.js` | `AC1 round length doubles short families and leaves make-ten alone` | pending |
-| AC2 | `test/anchorEngine.test.js` | `AC2 a make-three pass is both ordered pairs, blanked on the larger operand` | pending |
-| AC3 | `test/anchorEngine.test.js` | `AC3 a make-four pass is its three ordered pairs` | pending |
-| AC4 | `test/anchorFamilies.test.js` | `AC4 a make-three round never repeats an item back-to-back` | pending |
-| AC5 | `test/anchorFamilies.test.js` | `AC5 keypad length is the total for bonds and ten for doubles` | pending |
-| AC6 | `test/App.test.js` | `AC6 the anchor entries are listed ascending` | pending |
-| AC7 | `test/usePreferences.test.js` | `AC7 a stored total of three or four survives, an unsupported one falls back to ten` | pending |
+| AC1 | `test/anchorEngine.test.js` | `AC1 round length doubles short families and leaves make-ten alone` | green |
+| AC2 | `test/anchorEngine.test.js` | `AC2 a make-three pass is both ordered pairs, both blanking the second part` | green |
+| AC3 | `test/anchorEngine.test.js` | `AC3 a make-four pass is its three ordered pairs` | green |
+| AC4 | `test/anchorFamilies.test.js` | `AC4 a make-three round never repeats an item back-to-back` | green |
+| AC5 | `test/anchorFamilies.test.js` | `AC5 keypad length is the total for bonds and ten for doubles` | green |
+| AC6 | `test/App.test.js` | `AC6 the anchor entries are listed ascending` | green |
+| AC7 | `test/usePreferences.test.js` | `AC7 a stored total of three or four survives, an unsupported one falls back to ten` | green |
 | AC8 | `test/anchorFamilies.test.js` | `AC8 the frame draws one row at totals three and four` | green |
 | AC9 | `test/anchorEngine.test.js` | `AC9 a make-three pass asks for both parts, so the answer is not always two` | green |
 | AC10 | `test/anchorEngine.test.js` | `AC10 every family asks each part exactly once` | green |
