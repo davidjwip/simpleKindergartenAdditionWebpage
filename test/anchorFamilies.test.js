@@ -418,19 +418,23 @@ describe('settled round contract', () => {
         vi.useRealTimers();
     });
 
-    it('AC8 the frame draws one row of three cells at total three', async () => {
-        const wrapper = await mountApp({
-            mode: 'anchor',
-            anchorTotal: 3,
-            anchorKind: 'bond'
-        });
+    it('AC8 the frame draws one row at totals three and four', async () => {
+        // B6 promises a single row for every total at or below five, so asserting only total 3 would
+        // leave a renderer that special-cased one of them, or stepped its rows by anything but five.
+        for (const total of [3, 4]) {
+            const wrapper = await mountApp({
+                mode: 'anchor',
+                anchorTotal: total,
+                anchorKind: 'bond'
+            });
 
-        expect(wrapper.vm.anchorTotal).toBe(3);
-        expect(wrapper.find('.number-frame').attributes('data-total')).toBe('3');
-        expect(wrapper.findAll('.frame-row')).toHaveLength(1);
-        expect(wrapper.findAll('.frame-cell')).toHaveLength(3);
+            expect(wrapper.vm.anchorTotal).toBe(total);
+            expect(wrapper.find('.number-frame').attributes('data-total')).toBe(String(total));
+            expect(wrapper.findAll('.frame-row')).toHaveLength(1);
+            expect(wrapper.findAll('.frame-cell')).toHaveLength(total);
 
-        wrapper.unmount();
+            wrapper.unmount();
+        }
     });
 
     it('celebrates exactly once at the eighth make-five item despite two misses', async () => {

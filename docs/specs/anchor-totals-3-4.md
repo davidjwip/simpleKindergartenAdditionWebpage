@@ -31,7 +31,7 @@ are the same shape as make-five and make-ten at smaller totals — **a total ext
 | AC5 | anchor mode, bond kind | the keypad length is read at totals 3, 4, 5, 10 | it is 3, 4, 5, 10; with doubles selected it is 10 regardless of the stored total |
 | AC6 | the options panel | it is rendered | the five anchor entries appear in the order Make 3, Make 4, Make 5, Make 10, Doubles |
 | AC7 | a stored preference of 3 or 4 | preferences are loaded | the total survives; an unsupported stored value (e.g. 7) falls back to 10 |
-| AC8 | anchor mode at total 3 | the frame is rendered | it has `data-total="3"`, three cells and one row |
+| AC8 | anchor mode at totals 3 and 4 | the frame is rendered | it carries that total, one row, and as many cells as the total |
 
 ## 3. Out of scope
 
@@ -60,4 +60,4 @@ are the same shape as make-five and make-ten at smaller totals — **a total ext
 | AC5 | `test/anchorFamilies.test.js` | `AC5 keypad length is the total for bonds and ten for doubles` | pending |
 | AC6 | `test/App.test.js` | `AC6 the anchor entries are listed ascending` | pending |
 | AC7 | `test/usePreferences.test.js` | `AC7 a stored total of three or four survives, an unsupported one falls back to ten` | pending |
-| AC8 | `test/anchorFamilies.test.js` | `AC8 the frame draws one row of three cells at total three` | pending |
+| AC8 | `test/anchorFamilies.test.js` | `AC8 the frame draws one row at totals three and four` | green |

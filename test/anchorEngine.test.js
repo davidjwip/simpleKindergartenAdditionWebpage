@@ -137,11 +137,10 @@ describe('anchor totals 3 and 4', () => {
         expect(pass).toHaveLength(3);
         expect(itemKeys(pass)).toEqual(['1+3', '2+2', '3+1'].sort());
 
-        for (const item of pass) {
-            expect(item.answer).toBe(4);
-            expect(item.num1 + item.num2).toBe(4);
-            expect(item.kind).toBe('bond');
-        }
+        const byPair = new Map(pass.map((item) => [`${item.num1}+${item.num2}`, item]));
+        expect(byPair.get('1+3')).toMatchObject({ answer: 4, blankField: 'num2', kind: 'bond' });
+        expect(byPair.get('2+2')).toMatchObject({ answer: 4, blankField: 'num2', kind: 'bond' });
+        expect(byPair.get('3+1')).toMatchObject({ answer: 4, blankField: 'num1', kind: 'bond' });
     });
 });
 
