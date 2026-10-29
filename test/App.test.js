@@ -530,6 +530,19 @@ describe('adult panels dismiss themselves', () => {
         wrapper.unmount();
     });
 
+    it('AC6 the anchor entries are listed ascending', async () => {
+        const wrapper = mount(App);
+        await wrapper.find('.options-btn').trigger('click');
+
+        const labels = wrapper.findAll('.mode-btn').map((button) => button.text());
+        const anchorLabels = labels.filter(
+            (label) => label.startsWith('Make') || label === 'Doubles'
+        );
+
+        expect(anchorLabels).toEqual(['Make 3', 'Make 4', 'Make 5', 'Make 10', 'Doubles']);
+        wrapper.unmount();
+    });
+
     it('names every task the picker offers in the how-to-use text', async () => {
         const wrapper = mount(App);
         await wrapper.find('.options-btn').trigger('click');
