@@ -106,10 +106,9 @@ export function useMathGame(options = {}) {
         isStart.value ? Math.min(maxLimit.value, START_LIMIT_CAP) : maxLimit.value
     ));
 
-    const anchorFamily = computed(() => {
-        if (anchorKind.value === 'doubles') return 'doubles';
-        return anchorTotal.value === 5 ? 'make-five' : 'make-ten';
-    });
+    const anchorFamily = computed(() => (
+        anchorKind.value === 'doubles' ? 'doubles' : anchorTotal.value
+    ));
 
     const frameKind = computed(() => (
         isAnchor.value && anchorKind.value === 'doubles' ? 'doubles' : 'bond'
@@ -491,7 +490,9 @@ export function useMathGame(options = {}) {
     } = {}) {
         const numeric = Number(nextTotal);
         const resolvedMode = MODES.includes(nextMode) ? nextMode : DEFAULT_MODE;
-        const resolvedTotal = [5, 10].includes(numeric) ? numeric : DEFAULT_ANCHOR_TOTAL;
+        const resolvedTotal = [3, 4, 5, 10].includes(numeric)
+            ? numeric
+            : DEFAULT_ANCHOR_TOTAL;
         const resolvedKind = nextKind === 'doubles' ? 'doubles' : DEFAULT_ANCHOR_KIND;
         const previousOperator = operator.value;
         if (resolvedMode === 'start' && operator.value === '+') {
@@ -531,7 +532,9 @@ export function useMathGame(options = {}) {
 
     function setAnchorTotal(total) {
         const numeric = Number(total);
-        const nextTotal = [5, 10].includes(numeric) ? numeric : DEFAULT_ANCHOR_TOTAL;
+        const nextTotal = [3, 4, 5, 10].includes(numeric)
+            ? numeric
+            : DEFAULT_ANCHOR_TOTAL;
         if (isAnchor.value) {
             setModeOption({ mode: mode.value, anchorTotal: nextTotal, anchorKind: 'bond' });
             return;

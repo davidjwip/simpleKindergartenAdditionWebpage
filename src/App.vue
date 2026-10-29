@@ -70,8 +70,10 @@ const MODE_OPTIONS = [
     { key: 'result', id: 'result', label: 'Find the total', hint: '' },
     { key: 'part', id: 'part', label: 'Find the missing part', hint: 'start with step 1–2' },
     { key: 'start', id: 'start', label: 'Find what we started with', hint: 'keep step at 1' },
-    { key: 'make-ten', id: 'anchor', label: 'Make 10', hint: '', anchorTotal: 10, anchorKind: 'bond' },
+    { key: 'make-three', id: 'anchor', label: 'Make 3', hint: '', anchorTotal: 3, anchorKind: 'bond' },
+    { key: 'make-four', id: 'anchor', label: 'Make 4', hint: '', anchorTotal: 4, anchorKind: 'bond' },
     { key: 'make-five', id: 'anchor', label: 'Make 5', hint: '', anchorTotal: 5, anchorKind: 'bond' },
+    { key: 'make-ten', id: 'anchor', label: 'Make 10', hint: '', anchorTotal: 10, anchorKind: 'bond' },
     { key: 'doubles', id: 'anchor', label: 'Doubles', hint: '', anchorTotal: 10, anchorKind: 'doubles' }
 ];
 
@@ -495,9 +497,10 @@ function closeCelebration() {
                 <ul>
                     <li><strong>Task</strong> — which part of the sum is missing, or which facts to drill:
                         <em>Find the total</em> (3 + 4 = ?), <em>Find the missing part</em> (3 + ? = 7),
-                        <em>Find what we started with</em> (? − 3 = 4), <em>Make 10</em> (7 + ? = 10),
-                        <em>Make 5</em> and <em>Doubles</em> (4 + 4 = ?).
-                        The last three are adding games, so they only appear with +.</li>
+                        <em>Find what we started with</em> (? − 3 = 4), <em>Make 3</em> (1 + ? = 3),
+                        <em>Make 4</em> (1 + ? = 4), <em>Make 5</em> (3 + ? = 5),
+                        <em>Make 10</em> (7 + ? = 10) and <em>Doubles</em> (4 + 4 = ?).
+                        The last five are adding games, so they only appear with +.</li>
                     <li><strong>Step size</strong> — how big the number you add or take away is.
                         <em>1</em> means always +1 or −1; <em>2</em> means +2 or −2; <em>3-5</em> mixes 3, 4 and 5;
                         <em>Any</em> mixes everything up to the limit. A small step can still be counted on

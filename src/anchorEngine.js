@@ -5,7 +5,7 @@
  * mathEngine.js keep asking Math.random() directly.
  */
 
-const SUPPORTED_TOTALS = [5, 10];
+const SUPPORTED_TOTALS = [3, 4, 5, 10];
 const DOUBLES_MAX = 5;
 const NAMED_FAMILIES = {
     'make-five': 5,
@@ -70,7 +70,7 @@ export function makeRng(seed = Date.now()) {
 export function roundLengthForTotal(family) {
     if (resolvesToDoubles(family)) return DOUBLES_MAX;
     const total = numericTotal(family);
-    return total === 5 ? 8 : total - 1;
+    return total === 10 ? 9 : (total - 1) * 2;
 }
 
 export function trackLengthForTotal(family) {
