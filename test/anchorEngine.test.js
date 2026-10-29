@@ -140,11 +140,12 @@ describe('anchor totals 3 and 4', () => {
     });
 
     it('AC10 every family asks each part exactly once', () => {
-        // The same property at every total, so the rule cannot be right for three and wrong for ten.
+        // Read the ASKED value off blankField rather than assuming which operand is blank: otherwise
+        // this test would restate the implementation and pass for a rule it never checked.
+        const askedBy = (item) => (item.blankField === 'num1' ? item.num1 : item.num2);
+
         for (const total of [3, 4, 5, 10]) {
-            const asked = buildPass(total, makeRng(3))
-                .map((item) => item.num2)
-                .sort((a, b) => a - b);
+            const asked = buildPass(total, makeRng(3)).map(askedBy).sort((a, b) => a - b);
             expect(asked, `total ${total}`).toEqual(
                 Array.from({ length: total - 1 }, (_, index) => index + 1)
             );

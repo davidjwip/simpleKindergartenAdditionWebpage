@@ -27,7 +27,7 @@ are the same shape as make-five and make-ten at smaller totals — **a total ext
 | AC1 | the engine | `roundLengthForTotal` is asked for 3, 4, 5 and 10 | it answers 4, 6, 8 and 9 |
 | AC2 | a make-3 bond family | a pass is built | it is the two ordered pairs (1,2) and (2,1), each once, both blanking the second part |
 | AC3 | a make-4 bond family | a pass is built | it is the three ordered pairs (1,3), (2,2), (3,1), each once |
-| AC4 | a make-3 round played to the goal | the items are read in order | no item repeats back-to-back across the pass boundary, over a seeded round |
+| AC4 | a make-3 round's four items | they are read in order | no item repeats back-to-back, including across the pass boundary, over a spread of seeds |
 | AC5 | anchor mode, bond kind | the keypad length is read at totals 3, 4, 5, 10 | it is 3, 4, 5, 10; with doubles selected it is 10 regardless of the stored total |
 | AC6 | the options panel | it is rendered | the five anchor entries appear in the order Make 3, Make 4, Make 5, Make 10, Doubles |
 | AC7 | a stored preference of 3 or 4 | preferences are loaded | the total survives; an unsupported stored value (e.g. 7) falls back to 10 |
@@ -70,4 +70,4 @@ are the same shape as make-five and make-ten at smaller totals — **a total ext
 | AC7 | `test/usePreferences.test.js` | `AC7 a stored total of three or four survives, an unsupported one falls back to ten` | pending |
 | AC8 | `test/anchorFamilies.test.js` | `AC8 the frame draws one row at totals three and four` | green |
 | AC9 | `test/anchorEngine.test.js` | `AC9 a make-three pass asks for both parts, so the answer is not always two` | green |
-| AC10 | `test/anchorEngine.test.js` | `AC10 make-five and make-ten still blank the larger part` | green |
+| AC10 | `test/anchorEngine.test.js` | `AC10 every family asks each part exactly once` | green |
