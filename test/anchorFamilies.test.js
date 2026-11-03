@@ -232,12 +232,12 @@ describe('anchor family selection in the game', () => {
             game.setModeOption({ mode: 'anchor', anchorTotal: total, anchorKind: 'bond' });
 
             expect(game.anchorTotal.value).toBe(total);
-            expect(game.keypadLength.value).toBe(total);
+            expect(game.keypadMax.value).toBe(total);
         }
 
         game.setModeOption({ mode: 'anchor', anchorTotal: 4, anchorKind: 'doubles' });
 
-        expect(game.keypadLength.value).toBe(10);
+        expect(game.keypadMax.value).toBe(10);
     });
 
     it('stores a family while another mode is active without regenerating it', () => {
