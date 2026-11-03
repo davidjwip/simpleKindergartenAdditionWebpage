@@ -516,6 +516,7 @@ function closeCelebration() {
                         stops at 10 so the dots stay countable.</li>
                     <li><strong>Name and mascot</strong> — kept on this device only, never sent anywhere.</li>
                 </ul>
+                <p><strong>Some questions are about nothing.</strong> Now and then a sum has a zero in it — 7 + 0, or 3 − 3 = 0, or a full frame asking how many more — so the keypad always has a 0. They turn up every so often rather than in a block, and they are there on purpose.</p>
                 <p><strong>A wrong answer gets one more try.</strong> After a second miss the correct sum is shown so the child can see how it works, then the next problem comes.</p>
                 <p><strong>Progress.</strong> Ten correct answers — or one pass through the facts — fills the track and brings the celebration. Misses never end the game; there is nothing here to fail.</p>
             </div>
