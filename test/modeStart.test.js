@@ -88,9 +88,9 @@ describe('generateProblem start mode', () => {
                 expect(problem.blankField).toBe('num1');
                 expect(problem.num1).toBe(problem.num2 + problem.answer);
                 expect(problem.num1).toBeLessThanOrEqual(limit);
-                expect(problem.num2).toBeGreaterThanOrEqual(1);
-                expect(problem.answer).toBeGreaterThanOrEqual(1);
-                expect(problem.num1).toBeGreaterThan(problem.num2);
+                expect(problem.num2).toBeGreaterThanOrEqual(0);
+                expect(problem.answer).toBeGreaterThanOrEqual(0);
+                expect(problem.num1).toBeGreaterThanOrEqual(problem.num2);
             }
         }
     });
@@ -99,16 +99,20 @@ describe('generateProblem start mode', () => {
         expect(() => generateProblem('+', 10, 'start')).toThrow(RangeError);
     });
 
-    it('keeps no zero and no degenerate item across 1,000 start draws', () => {
+    it('allows the two zero shapes in start mode and never a negative or empty item', () => {
+        let zeroItems = 0;
         for (let i = 0; i < 1000; i++) {
             const problem = generateProblem('-', 10, 'start');
-            expect(problem.num1).not.toBe(problem.num2);
-            expect(problem.num1).not.toBe(1);
-            expect(problem.num2).not.toBe(0);
-            expect(problem.answer).not.toBe(0);
+            if (problem.num2 === 0 || problem.answer === 0) zeroItems += 1;
+            expect(problem.num1).toBeGreaterThanOrEqual(problem.num2);
+            expect(problem.num1).toBeGreaterThanOrEqual(1);
+            expect(problem.answer).toBe(problem.num1 - problem.num2);
+            expect(problem.num1 === 0 && problem.num2 === 0).toBe(false);
             expect(problem[problem.blankField]).toBeGreaterThanOrEqual(1);
             expect(problem[problem.blankField]).toBeLessThanOrEqual(10);
         }
+        // A sweep that never sees the thing it is about proves nothing.
+        expect(zeroItems).toBeGreaterThan(0);
     });
 });
 
@@ -280,24 +284,24 @@ describe('useMathGame start mode', () => {
         game.setMode('start');
 
         expect(game.maxLimit.value).toBe(20);
-        expect(game.keypadLength.value).toBe(10);
+        expect(game.keypadMax.value).toBe(10);
 
         for (let i = 0; i < 200; i++) {
             game.generateNewProblem();
             const solution = solutionFor(game);
             expect(correctValue(solution)).toBeLessThanOrEqual(10);
-            expect(game.keypadLength.value).toBe(10);
+            expect(game.keypadMax.value).toBe(10);
         }
 
         game.setMode('result');
         expect(game.maxLimit.value).toBe(20);
-        expect(game.keypadLength.value).toBe(20);
+        expect(game.keypadMax.value).toBe(20);
     });
 
     it('keeps the start keypad at the limit when the limit is below 10', () => {
         game.setMaxLimit(5);
 
-        expect(game.keypadLength.value).toBe(5);
+        expect(game.keypadMax.value).toBe(5);
 
         for (let i = 0; i < 30; i++) {
             game.generateNewProblem();
@@ -520,6 +524,22 @@ describe('useMathGame start mode', () => {
 });
 
 describe('App start mode', () => {
+    // Deterministic and non-zero by default: these screens are about the put-back bar, and a 1-in-8
+    // zero item (`? - 0 = c`, nothing taken away) silently changed what they were looking at. The
+    // draws stay *varied* — a constant would never satisfy the sum <= limit rejection loop — but
+    // never fall below ZERO_RATE, so the zero path cannot fire. The zero case has its own test.
+    beforeEach(() => {
+        let state = 987654321;
+        vi.spyOn(Math, 'random').mockImplementation(() => {
+            state = (state * 1664525 + 1013904223) >>> 0;
+            return 0.13 + (state / 4294967296) * 0.86;
+        });
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it('offers the start task and advises on step without disabling it under addition', async () => {
         const wrapper = mount(App);
 
@@ -576,6 +596,7 @@ describe('App start mode', () => {
 
     it('fills the ghost dots on a put-back tap and still requires the keypad answer', async () => {
         const wrapper = await mountStartApp();
+        expect(wrapper.vm.num2).not.toBe('0');
         const correct = correctValueFromApp(wrapper);
         const before = dotCounts(wrapper);
 
@@ -590,7 +611,7 @@ describe('App start mode', () => {
         expect(wrapper.findAll('.problem input')[0].element.value).toBe('');
         expect(wrapper.vm.problemsSolved).toBe(0);
 
-        await wrapper.findAll('.touchpad-btn')[correct - 1].trigger('click');
+        await wrapper.find(`[data-key="${Number(correct)}"]`).trigger('click');
         await wrapper.vm.$nextTick();
 
         expect(wrapper.vm.problemsSolved).toBe(1);
@@ -600,7 +621,7 @@ describe('App start mode', () => {
     it('renders countable rows at limit 5 without a key above 5', async () => {
         const wrapper = await mountStartApp({ limit: 5 });
 
-        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(5);
+        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(6);
 
         for (let i = 0; i < 30; i++) {
             wrapper.vm.generateNewProblem();
@@ -627,10 +648,10 @@ describe('App start mode', () => {
             const correct = correctValueFromApp(wrapper);
             const wrong = wrongFor(correct);
 
-            await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+            await wrapper.find(`[data-key="${Number(wrong)}"]`).trigger('click');
             vi.advanceTimersByTime(HOLD_DELAY);
             await wrapper.vm.$nextTick();
-            await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+            await wrapper.find(`[data-key="${Number(wrong)}"]`).trigger('click');
             await wrapper.vm.$nextTick();
 
             const inputs = wrapper.findAll('.problem input');
@@ -652,7 +673,7 @@ describe('App start mode', () => {
         const headerBtns = wrapper.findAll('.header-actions .action-btn');
 
         expect(wrapper.vm.mode).toBe('start');
-        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(10);
+        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(11);
         expect(headerBtns[3].text()).toBe('🔢 Limit: 10');
 
         await headerBtns[3].trigger('click');
@@ -673,7 +694,7 @@ describe('App start mode', () => {
         await wrapper.vm.$nextTick();
 
         expect(wrapper.vm.mode).toBe('result');
-        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(20);
+        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(21);
         expect(headerBtns[3].text()).toBe('🔢 Limit: 20');
         expect(JSON.parse(localStorage.getItem(STORAGE_KEY)).maxLimit).toBe(20);
 
@@ -690,7 +711,7 @@ describe('App start mode', () => {
         await wrapper.vm.$nextTick();
         await wrapper.vm.$nextTick();
 
-        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(10);
+        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(11);
         expect(wrapper.vm.maxLimit).toBe(20);
         expect(JSON.parse(localStorage.getItem(STORAGE_KEY)).maxLimit).toBe(20);
         expect(wrapper.find('.limit-popup').exists()).toBe(false);
@@ -707,7 +728,7 @@ describe('App start mode', () => {
         await wrapper.vm.$nextTick();
         await wrapper.vm.$nextTick();
 
-        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(10);
+        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(11);
         expect(wrapper.vm.maxLimit).toBe(20);
         expect(JSON.parse(localStorage.getItem(STORAGE_KEY)).maxLimit).toBe(20);
 
@@ -753,6 +774,42 @@ describe('App start mode', () => {
         expect(wrapper.findAll('.dot-row .dot.taken')).toHaveLength(0);
 
         wrapper.unmount();
+    });
+
+    it('renders no put-back control when nothing was taken away, because zero is a legal item', async () => {
+        // Draws scripted: the zero path fires (0.01 < ZERO_RATE), the other operand is 2, and zero
+        // is the second operand — so the item is 2 - 0 = 2 and the blank is the starting number.
+        // Nothing was taken, so there is nothing to put back, and no control that cannot act.
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: 'start', maxLimit: 10 }));
+        const wrapper = mount(App);
+        await wrapper.vm.$nextTick();
+        await wrapper.vm.$nextTick();
+        await wrapper.vm.$nextTick();
+
+        // zero path, then num1 = 2, then the "nothing taken away" branch for num2
+        const script = [0.01, 0.1, 0.1];
+        let call = 0;
+        let state = 987654321;
+        const spy = vi.spyOn(Math, 'random').mockImplementation(() => {
+            call += 1;
+            if (call <= script.length) return script[call - 1];
+            state = (state * 1664525 + 1013904223) >>> 0;
+            return state / 4294967296;
+        });
+        try {
+            wrapper.vm.generateNewProblem();
+            await wrapper.vm.$nextTick();
+
+            expect(wrapper.vm.mode).toBe('start');
+            expect(String(wrapper.vm.num2)).toBe('0');
+            expect(wrapper.find('.dot-row').exists()).toBe(true);
+            expect(wrapper.find('.taken-away').exists()).toBe(false);
+            expect(wrapper.findAll('.dot.taken')).toHaveLength(0);
+
+            wrapper.unmount();
+        } finally {
+            spy.mockRestore();
+        }
     });
 
     it('does not render the start bar outside start mode', async () => {

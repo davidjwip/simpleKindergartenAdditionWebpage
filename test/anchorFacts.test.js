@@ -132,7 +132,7 @@ describe('useMathGame anchor mode', () => {
         expect(game.mode.value).toBe('anchor');
         expect(game.anchorTotal.value).toBe(10);
         expect(game.roundLength.value).toBe(9);
-        expect(game.keypadLength.value).toBe(10);
+        expect(game.keypadMax.value).toBe(10);
         expect(game.blankField.value).not.toBe('answer');
     });
 
@@ -175,7 +175,7 @@ describe('useMathGame anchor mode', () => {
         game.setMaxLimit(5);
         game.setMode('anchor');
 
-        expect(game.keypadLength.value).toBe(10);
+        expect(game.keypadMax.value).toBe(10);
         expect(game.maxLimit.value).toBe(5);
     });
 
@@ -186,11 +186,11 @@ describe('useMathGame anchor mode', () => {
         game.setMaxLimit(20);
 
         expect(fields(game)).toEqual(before);
-        expect(game.keypadLength.value).toBe(10);
+        expect(game.keypadMax.value).toBe(10);
         expect(game.maxLimit.value).toBe(20);
 
         game.setMode('result');
-        expect(game.keypadLength.value).toBe(20);
+        expect(game.keypadMax.value).toBe(20);
         expect(game.roundLength.value).toBe(10);
     });
 
@@ -217,7 +217,7 @@ describe('useMathGame anchor mode', () => {
 
         expect(vi.getTimerCount()).toBe(0);
         expect(game.itemLog.value).toHaveLength(0);
-        expect(game.keypadLength.value).toBe(10);
+        expect(game.keypadMax.value).toBe(10);
         expect(game.roundLength.value).toBe(10);
 
         vi.advanceTimersByTime(10000);
@@ -234,13 +234,13 @@ describe('useMathGame anchor mode', () => {
         game.setAnchorTotal(5);
 
         expect(game.anchorTotal.value).toBe(5);
-        expect(game.keypadLength.value).toBe(5);
+        expect(game.keypadMax.value).toBe(5);
         expect(game.roundLength.value).toBe(8);
         expect(generations).toBe(1);
 
         game.setAnchorTotal(10);
         expect(game.anchorTotal.value).toBe(10);
-        expect(game.keypadLength.value).toBe(10);
+        expect(game.keypadMax.value).toBe(10);
         expect(game.roundLength.value).toBe(9);
     });
 
@@ -339,6 +339,8 @@ describe('App anchor mode', () => {
 
         const buttons = wrapper.findAll('.touchpad-btn');
         expect(buttons).toHaveLength(10);
+        // a bond's parts are never zero, so the anchor keypad keeps its 1..total for now
+        expect(wrapper.find('[data-key="0"]').exists()).toBe(false);
         expect(buttons.map((button) => button.text())).toEqual(
             ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
         );
@@ -378,10 +380,10 @@ describe('App anchor mode', () => {
             const correct = correctValueFromApp(wrapper);
             const wrong = correct === 1 ? 2 : 1;
 
-            await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+            await wrapper.find(`[data-key="${Number(wrong)}"]`).trigger('click');
             vi.advanceTimersByTime(HOLD_DELAY);
             await wrapper.vm.$nextTick();
-            await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+            await wrapper.find(`[data-key="${Number(wrong)}"]`).trigger('click');
             await wrapper.vm.$nextTick();
 
             expect(wrapper.vm.isRevealing).toBe(true);
@@ -405,10 +407,10 @@ describe('App anchor mode', () => {
                 const correct = correctValueFromApp(wrapper);
                 const wrong = correct === 1 ? 2 : 1;
 
-                await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+                await wrapper.find(`[data-key="${Number(wrong)}"]`).trigger('click');
                 vi.advanceTimersByTime(HOLD_DELAY);
                 await wrapper.vm.$nextTick();
-                await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+                await wrapper.find(`[data-key="${Number(wrong)}"]`).trigger('click');
                 await wrapper.vm.$nextTick();
 
                 expect(wrapper.vm.isRevealing).toBe(true);
@@ -445,7 +447,7 @@ describe('App anchor mode', () => {
 
             for (let i = 0; i < roundLength; i++) {
                 const correct = correctValueFromApp(wrapper);
-                await wrapper.findAll('.touchpad-btn')[correct - 1].trigger('click');
+                await wrapper.find(`[data-key="${Number(correct)}"]`).trigger('click');
                 if (i < roundLength - 1) {
                     vi.advanceTimersByTime(AUTO_ADVANCE);
                     await wrapper.vm.$nextTick();
@@ -492,7 +494,7 @@ describe('App anchor mode', () => {
         await selectMode(wrapper, 'Find the total');
 
         expect(wrapper.vm.mode).toBe('result');
-        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(20);
+        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(21);
 
         wrapper.unmount();
     });

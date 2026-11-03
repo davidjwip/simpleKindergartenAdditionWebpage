@@ -93,7 +93,7 @@ function gameItem(game) {
 
 async function finishCorrect(wrapper) {
     const correct = correctValue(wrapper);
-    await wrapper.findAll('.touchpad-btn')[correct - 1].trigger('click');
+    await wrapper.find(`[data-key="${Number(correct)}"]`).trigger('click');
     await wrapper.vm.$nextTick();
 }
 
@@ -101,11 +101,11 @@ async function finishMissed(wrapper) {
     const correct = correctValue(wrapper);
     const wrong = correct === 1 ? 2 : 1;
 
-    await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+    await wrapper.find(`[data-key="${Number(wrong)}"]`).trigger('click');
     await wrapper.vm.$nextTick();
     vi.advanceTimersByTime(HOLD_DELAY);
     await wrapper.vm.$nextTick();
-    await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+    await wrapper.find(`[data-key="${Number(wrong)}"]`).trigger('click');
     await wrapper.vm.$nextTick();
 }
 
@@ -208,7 +208,7 @@ describe('anchor family selection in the game', () => {
 
         expect(game.anchorKind.value).toBe('doubles');
         expect(game.roundLength.value).toBe(5);
-        expect(game.keypadLength.value).toBe(10);
+        expect(game.keypadMax.value).toBe(10);
         expect(game.frameKind.value).toBe('doubles');
     });
 
@@ -221,7 +221,7 @@ describe('anchor family selection in the game', () => {
         expect(game.anchorKind.value).toBe('bond');
         expect(game.anchorTotal.value).toBe(5);
         expect(game.roundLength.value).toBe(8);
-        expect(game.keypadLength.value).toBe(5);
+        expect(game.keypadMax.value).toBe(5);
         expect(game.frameKind.value).toBe('bond');
     });
 

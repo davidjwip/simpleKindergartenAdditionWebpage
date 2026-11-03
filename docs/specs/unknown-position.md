@@ -46,7 +46,7 @@ A four-year-old facing `? − 3 = 4` with only numerals will count on from nothi
 
 **Wrong-answer reveal for this mode (the teaching moment).** On a second wrong tap, the reveal does the put-back itself: ghost dots animate to filled, the full row counts itself (dots pulse left to right), and the completed equation appears — "? − 3 = 4" becomes "**7** − 3 = 4", with the spoken-equivalent copy "We started with 7. Take away 3, 4 are left." The reveal holds ~2.5 s (longer than the correct-answer 2 s, because it is doing work), then advances.
 
-**Constraints on items in this mode.** Same engine guarantees as today: no zero anywhere, `num1 > num2`, limit applies to operands and answer — so `? − b = c` items have `? ≤ limit`, the answer always on the keypad (keypad is 1..limit, no zero, correct by design per audit §3). At limit 5 the mode yields items like `? − 2 = 3` (`? = 5`). **This mode caps its own limit at 10**: while `start` is selected the limit picker greys out 15 and 20, so the put-back row is always a single countable row of ≤10 dots. A wrapped 20-dot row would require the child to compose a ten and a remainder — the skill still being taught — and it contradicts both the plan's default ceiling and the evidence that sums to 20 invite guessing. The stored preference is not overwritten by the cap: leaving the mode restores the adult's limit.
+**Constraints on items in this mode.** Same engine guarantees as today, with zero now allowed at its rate (see `zero-inline.md`): `num1 ≥ num2`, limit applies to operands and answer — so `? − b = c` items have `? ≤ limit`, and every legal value is on the keypad, which runs `0..limit`. At limit 5 the mode yields items like `? − 2 = 3` (`? = 5`). **This mode caps its own limit at 10**: while `start` is selected the limit picker greys out 15 and 20, so the put-back row is always a single countable row of ≤10 dots. A wrapped 20-dot row would require the child to compose a ten and a remainder — the skill still being taught — and it contradicts both the plan's default ceiling and the evidence that sums to 20 invite guessing. The stored preference is not overwritten by the cap: leaving the mode restores the adult's limit.
 
 ## 4. Data model and state machine
 
@@ -99,7 +99,7 @@ Properties: at most two scored taps per item; the item never changes under the c
 
 ### Mode `result` (default)
 1. Given a fresh or migrated install, when the app loads, then every item blanks only the answer across both operators.
-2. Given 200 generated items at limit 10, when blankField is tallied, then 100% are `answer` and all engine invariants hold (no zero, `a > b` for −, answer ≤ limit).
+2. Given 200 generated items at limit 10, when blankField is tallied, then 100% are `answer` and all engine invariants hold (`a ≥ b` for −, no item with both operands zero, answer ≤ limit).
 
 ### Mode `part`
 3. Given mode `part` and operator +, when 200 items generate, then blanks are `num1` or `num2` only, and the shown answer equals the sum.
@@ -119,8 +119,10 @@ Properties: at most two scored taps per item; the item never changes under the c
 ### Boundary cases
 14. **Limit 5, mode start:** items like `? − 2 = 3` render 2 ghost + 3 filled dots; no item requires a key above 5.
 15. **Limit 10, mode start:** put-back row wraps at 10; the largest answer (10) is reachable on the keypad.
-16. **No zero:** across all modes and 1,000 generated items, no zero appears as operand, answer, blank value, or keypad key.
-17. **Degenerate items:** no `a − a`, no `1 − b` (engine's existing `num1 === 1` guard holds in all modes).
+16. **Zero at a rate, never a degeneracy:** across 1,000 generated items, zero appears as operand, answer or blank only through the zero path (~1 in 8), never as `0 + 0`, and the keypad always offers `0..limit`.
+17. **Degenerate items:** `a − a` and `1 − b` are now legal — they are the zero shapes (`n − n = 0`,
+    `1 − 0 = 1`, `1 − 1 = 0`). What is still excluded is an item with both operands zero (`0 + 0`, and
+    `0 − 0`, which cannot arise at `n ≥ 1`) and a negative answer (`num2 ≤ num1` in every mode).
 18. **Mode change mid-round:** Given any item on screen, when the adult changes mode, then timers clear, the current item is discarded unscored, and a new item generates in the new mode.
 19. **Mode change during the 2 s advance:** Given a correct answer with the advance timer pending, when the adult changes mode before it fires, then the timer is cancelled and exactly one new item generates in the new mode (no discarded phantom item — the defect-D6 class).
 20. **Mode change during HOLD/RETRY/REVEAL:** same as 18 — the state machine resets to IDLE in the new mode and the abandoned item is not written to the log at all.
@@ -138,7 +140,7 @@ Tests are written before code in each PR, in the repo's existing layout (Vitest 
 **`test/mathEngine.test.js` (extend)**
 - `generateProblem` returns `{num1, num2, answer, blankField, mode, operator}` for every (mode, operator, step) pair, and the returned object carries **no** `step` field (it is a generation parameter, logged separately).
 - Mode→blank mapping per §4 table, incl. `part`/− never blanking `num1` and `start` never existing under +.
-- Invariants sweep: 1,000 items per (mode, operator, step): no zero; limit respected on operands and answer; `num1 > num2` for −; blank value ∈ 1..limit (always keypad-reachable); and the step ceiling holds for `1` / `2` / `3-5` while `any` reproduces today's distribution.
+- Invariants sweep: 1,000 items per (mode, operator, step): zero only through the zero path; limit respected on operands and answer; `num1 ≥ num2` for −; no `0 + 0`; blank value ∈ 0..limit (always keypad-reachable); and the step ceiling holds for `1` / `2` / `3-5` while `any` reproduces today's distribution plus the zero rate.
 - `generateProblem('+', limit, 'start')` throws or is uncallable.
 - `evaluateAnswer('')` returns `null`.
 - Generators terminate at limit < 2 (throw, bounded).

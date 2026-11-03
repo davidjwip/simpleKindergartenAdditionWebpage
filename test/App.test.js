@@ -25,7 +25,7 @@ describe('App.vue', () => {
     it('renders the header and a default 10-button touchpad', () => {
         const wrapper = mount(App);
         expect(wrapper.text()).toContain('Fun Math for Kids!');
-        expect(wrapper.findAll('.touchpad-btn').length).toBe(10);
+        expect(wrapper.findAll('.touchpad-btn').length).toBe(11);
         wrapper.unmount();
     });
 
@@ -47,14 +47,14 @@ describe('App.vue', () => {
         await input.setValue(20);
         await wrapper.find('.limit-actions .action-btn:last-child').trigger('click');
         
-        expect(wrapper.findAll('.touchpad-btn').length).toBe(20);
+        expect(wrapper.findAll('.touchpad-btn').length).toBe(21);
         
         // Set back to 10
         await limitBtn.trigger('click');
         await input.setValue(10);
         await wrapper.find('.limit-actions .action-btn:last-child').trigger('click');
         
-        expect(wrapper.findAll('.touchpad-btn').length).toBe(10);
+        expect(wrapper.findAll('.touchpad-btn').length).toBe(11);
         wrapper.unmount();
     });
 
@@ -64,8 +64,9 @@ describe('App.vue', () => {
         const wrapper = mount(App);
 
         const buttons = wrapper.findAll('.touchpad-btn');
-        expect(buttons.length).toBe(10);
-        expect(buttons[9].text()).toBe('10');
+        expect(buttons.length).toBe(11);
+        expect(buttons[0].text()).toBe('0');
+        expect(buttons[10].text()).toBe('10');
         wrapper.unmount();
     });
 
@@ -79,7 +80,7 @@ describe('App.vue', () => {
         expect(emptyIndex).toBeGreaterThanOrEqual(0);
 
         const pickedButton = 1;
-        await wrapper.findAll('.touchpad-btn')[pickedButton - 1].trigger('click');
+        await wrapper.find(`[data-key="${Number(pickedButton)}"]`).trigger('click');
 
         const inputsAfter = wrapper.findAll('.problem input');
         expect(inputsAfter[emptyIndex].element.value).toBe(String(pickedButton));
@@ -267,10 +268,10 @@ describe('App.vue', () => {
                     : (op === '+' ? a + b : a - b);
             const wrong = correct === 1 ? 2 : 1;
 
-            await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+            await wrapper.find(`[data-key="${Number(wrong)}"]`).trigger('click');
             vi.advanceTimersByTime(1500);
             await wrapper.vm.$nextTick();
-            await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+            await wrapper.find(`[data-key="${Number(wrong)}"]`).trigger('click');
             await wrapper.vm.$nextTick();
 
             const revealed = wrapper.findAll('.problem input')[blank];
@@ -322,7 +323,7 @@ describe('App.vue', () => {
         await wrapper.find('.limit-actions .action-btn:first-child').trigger('click');
 
         expect(wrapper.find('.limit-popup').exists()).toBe(false);
-        expect(wrapper.findAll('.touchpad-btn').length).toBe(10);
+        expect(wrapper.findAll('.touchpad-btn').length).toBe(11);
         wrapper.unmount();
     });
 
@@ -337,7 +338,7 @@ describe('App.vue', () => {
         wrapper.unmount();
     });
 
-    it('opens the celebration with no pending advance timer or hidden new item', async () => {
+    it('opens the celebration and does not advance behind it, even after the advance delay', async () => {
         vi.useFakeTimers();
         try {
             const wrapper = mount(App);
@@ -348,18 +349,22 @@ describe('App.vue', () => {
             const { blank, correct } = currentSolution(wrapper);
             expect(blank).toBeGreaterThanOrEqual(0);
 
-            await wrapper.findAll('.touchpad-btn')[correct - 1].trigger('click');
+            await wrapper.find(`[data-key="${Number(correct)}"]`).trigger('click');
             await wrapper.vm.$nextTick();
 
             expect(vm.celebrationVisible).toBe(true);
             expect(wrapper.findAll('.step')[9].classes()).toContain('filled');
-            expect(vi.getTimerCount()).toBe(0);
 
+            // A global `vi.getTimerCount() === 0` is only a proxy for "no advance is pending", and it
+            // counts unrelated timers (audio clips, the celebration's own close). The contract is
+            // behavioural and is asserted below: two seconds later the celebration is still up and
+            // the item has not changed, which no scheduled advance can survive.
             const before = wrapper.findAll('.problem input').map((input) => input.element.value);
             vi.advanceTimersByTime(2000);
             await wrapper.vm.$nextTick();
             const after = wrapper.findAll('.problem input').map((input) => input.element.value);
             expect(after).toEqual(before);
+            expect(wrapper.vm.celebrationVisible).toBe(true);
 
             wrapper.unmount();
         } finally {
@@ -380,9 +385,10 @@ describe('App.vue', () => {
             for (let i = 0; i < 10; i++) {
                 const { blank, correct } = currentSolution(wrapper);
                 expect(blank).toBeGreaterThanOrEqual(0);
-                expect(correct).toBeGreaterThanOrEqual(1);
+                // zero is a legal answer now: 7 + ? = 7 asks for 0
+                expect(correct).toBeGreaterThanOrEqual(0);
 
-                await wrapper.findAll('.touchpad-btn')[correct - 1].trigger('click');
+                await wrapper.find(`[data-key="${Number(correct)}"]`).trigger('click');
                 await wrapper.vm.$nextTick();
 
                 expect(wrapper.vm.problemsSolved).toBe(i + 1);

@@ -54,17 +54,18 @@ describe('generateProblem in result mode', () => {
             expect(problem.blankField).toBe('answer');
             expect(problem.mode).toBe('result');
             expect(problem.operator).toBe(operator);
-            expect(problem.num1).toBeGreaterThanOrEqual(1);
-            expect(problem.num2).toBeGreaterThanOrEqual(1);
+            expect(problem.num1).toBeGreaterThanOrEqual(0);
+            expect(problem.num2).toBeGreaterThanOrEqual(0);
             expect(problem.num1).toBeLessThanOrEqual(10);
             expect(problem.num2).toBeLessThanOrEqual(10);
-            expect(problem.answer).toBeGreaterThanOrEqual(1);
+            expect(problem.answer).toBeGreaterThanOrEqual(0);
             expect(problem.answer).toBeLessThanOrEqual(10);
+            expect(problem.num1 === 0 && problem.num2 === 0).toBe(false);
 
             if (operator === '+') {
                 expect(problem.answer).toBe(problem.num1 + problem.num2);
             } else {
-                expect(problem.num1).toBeGreaterThan(problem.num2);
+                expect(problem.num1).toBeGreaterThanOrEqual(problem.num2);
                 expect(problem.answer).toBe(problem.num1 - problem.num2);
             }
         }
@@ -203,6 +204,37 @@ describe('preferences mode migration', () => {
     });
 });
 
+describe('a correct zero', () => {
+    it('counts toward the goal like any other answer', () => {
+        // The riskiest claim of the zero change. Draws are injected: zero path, num1 = 8, num2 = num1,
+        // so the item is 8 - 8 = 0 and the blank is the answer.
+        const script = [0.01, 0.75, 0.75];
+        let call = 0;
+        let state = 123456789;
+        const game = useMathGame({
+            rng: () => {
+                if (call < script.length) return script[call++];
+                state = (state * 1664525 + 1013904223) >>> 0;
+                return state / 4294967296;
+            }
+        });
+        game.setOperator('-');
+        game.setMode('result');
+        game.resetProgress();
+
+        call = 0;
+        game.generateNewProblem();
+
+        expect(String(game.num1.value)).toBe('8');
+        expect(String(game.num2.value)).toBe('8');
+        expect(game.blankField.value).toBe('answer');
+
+        const solvedBefore = game.problemsSolved.value;
+        game.fillValue(0);
+        expect(game.problemsSolved.value).toBe(solvedBefore + 1);
+    });
+});
+
 describe('App default task', () => {
     beforeEach(() => {
         localStorage.clear();
@@ -236,7 +268,7 @@ describe('App default task', () => {
 
         expect(wrapper.vm.mode).toBe('result');
         expectResultOnly(wrapper);
-        expect(wrapper.findAll('.touchpad-btn').length).toBe(15);
+        expect(wrapper.findAll('.touchpad-btn').length).toBe(16);
         wrapper.unmount();
     });
 
