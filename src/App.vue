@@ -21,7 +21,6 @@ const {
     anchorTotal,
     frameKind,
     frameTotal,
-    keypadMax,
     keypadKeys,
     roundLength,
     roundProgress,

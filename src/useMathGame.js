@@ -127,14 +127,12 @@ export function useMathGame(options = {}) {
             : effectiveMaxLimit.value
     ));
 
-    // Zero is a key wherever zero can be asked for. The ordinary modes can ask it (n − n = 0,
-    // n + ? = n), so their keypad runs 0..limit. The anchor families ask only 1..total — a bond's
-    // parts are never zero — and anchor-facts.md criterion 5 pins that keypad, so it keeps 1..total
-    // until the bond pass itself learns to ask for zero.
+    // Zero is a key wherever zero can be asked for: the ordinary modes ask it (n − n = 0, n + ? = n)
+    // and a bond pass now ends with "the frame is full, how many more?" — 0. So every keypad runs
+    // 0..max.
     const keypadKeys = computed(() => {
         const max = keypadMax.value;
-        const first = isAnchor.value ? 1 : 0;
-        return Array.from({ length: max - first + 1 }, (_, index) => index + first);
+        return Array.from({ length: max + 1 }, (_, index) => index);
     });
 
     const roundLength = computed(() => (

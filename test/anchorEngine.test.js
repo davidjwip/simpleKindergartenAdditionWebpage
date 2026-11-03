@@ -15,7 +15,7 @@ function pairKey(item) {
 
 function orderedPairs(total) {
     const pairs = [];
-    for (let num1 = 1; num1 < total; num1++) {
+    for (let num1 = 1; num1 <= total; num1++) {
         pairs.push(`${num1}+${total - num1}`);
     }
     return pairs.sort();
@@ -47,12 +47,13 @@ describe('makeRng', () => {
 });
 
 describe('buildPass for make-ten', () => {
-    it('covers all nine ordered pairs exactly once', () => {
+    it('covers all ten ordered pairs exactly once, including 10+0', () => {
         const pass = buildPass(TOTAL, makeRng(7));
 
-        expect(pass).toHaveLength(9);
+        expect(pass).toHaveLength(10);
         expect(itemKeys(pass)).toEqual(orderedPairs(TOTAL));
-        expect(new Set(itemKeys(pass)).size).toBe(9);
+        expect(new Set(itemKeys(pass)).size).toBe(10);
+        expect(itemKeys(pass)).toContain('10+0');
     });
 
     it('blanks the second part of every pair, so each part is asked once', () => {
@@ -65,10 +66,10 @@ describe('buildPass for make-ten', () => {
         }
 
         const asked = pass.map((item) => item.num2).sort((a, b) => a - b);
-        expect(asked).toEqual(Array.from({ length: TOTAL - 1 }, (_, index) => index + 1));
+        expect(asked).toEqual(Array.from({ length: TOTAL }, (_, index) => index));
     });
 
-    it('keeps every item a valid addition to the family total with no zero', () => {
+    it('keeps every item a valid addition to the family total, with zero legal only as the second part', () => {
         const pass = buildPass(TOTAL, makeRng(3));
 
         for (const item of pass) {
@@ -77,8 +78,10 @@ describe('buildPass for make-ten', () => {
             expect(item.answer).toBe(TOTAL);
             expect(item.num1 + item.num2).toBe(TOTAL);
             expect(item.num1).toBeGreaterThanOrEqual(1);
-            expect(item.num2).toBeGreaterThanOrEqual(1);
+            expect(item.num2).toBeGreaterThanOrEqual(0);
         }
+
+        expect(pass.filter((item) => item.num1 === TOTAL && item.num2 === 0)).toHaveLength(1);
     });
 
     it('re-invokes the shuffle for a new pass from the same rng', () => {
@@ -91,8 +94,8 @@ describe('buildPass for make-ten', () => {
     });
 
     it('accepts the family by name or by total object', () => {
-        expect(buildPass('make-ten', makeRng(4))).toHaveLength(9);
-        expect(buildPass({ total: 10 }, makeRng(4))).toHaveLength(9);
+        expect(buildPass('make-ten', makeRng(4))).toHaveLength(10);
+        expect(buildPass({ total: 10 }, makeRng(4))).toHaveLength(10);
     });
 
     it('rejects a family whose total is not a supported anchor', () => {
@@ -101,22 +104,23 @@ describe('buildPass for make-ten', () => {
 });
 
 describe('anchor totals 3 and 4', () => {
-    it('AC1 round length doubles short families and leaves make-ten alone', () => {
-        expect(roundLengthForTotal(3)).toBe(4);
-        expect(roundLengthForTotal(4)).toBe(6);
-        expect(roundLengthForTotal(5)).toBe(8);
-        expect(roundLengthForTotal(10)).toBe(9);
+    it('AC1 round length is ten for every family, so short families no longer differ from make-ten', () => {
+        expect(roundLengthForTotal(3)).toBe(10);
+        expect(roundLengthForTotal(4)).toBe(10);
+        expect(roundLengthForTotal(5)).toBe(10);
+        expect(roundLengthForTotal(10)).toBe(10);
+        expect(roundLengthForTotal('doubles')).toBe(10);
     });
 
-    it('AC2 a make-three pass is both ordered pairs, both blanking the second part', () => {
+    it('AC2 a make-three pass is all three ordered pairs, including 3+0, all blanking the second part', () => {
         const pass = buildPass(3, makeRng(7));
 
-        expect(pass).toHaveLength(2);
-        expect(itemKeys(pass)).toEqual(['1+2', '2+1'].sort());
+        expect(pass).toHaveLength(3);
+        expect(itemKeys(pass)).toEqual(['1+2', '2+1', '3+0'].sort());
 
         const byPair = new Map(pass.map((item) => [`${item.num1}+${item.num2}`, item]));
-        // Both pairs blank the second part: with only two pairs, blanking the larger part in both
-        // would ask 2 twice and the answer would never be 1 (see AC9).
+        // Every pair blanks the second part: blanking the larger part instead would ask 2 twice and
+        // never ask 1 or 0 (see AC9).
         expect(byPair.get('1+2')).toMatchObject({
             answer: 3,
             blankField: 'num2',
@@ -127,19 +131,24 @@ describe('anchor totals 3 and 4', () => {
             blankField: 'num2',
             kind: 'bond'
         });
+        expect(byPair.get('3+0')).toMatchObject({
+            answer: 3,
+            blankField: 'num2',
+            kind: 'bond'
+        });
     });
 
-    it('AC9 a make-three pass asks for both parts, so the answer is not always two', () => {
-        // The defect this pins: blanking the larger part in both pairs asked `1 + ? = 3` and
-        // `? + 1 = 3`, i.e. 2 twice, and one key cleared the whole family.
+    it('AC9 a make-three pass asks for every part, 0 through 2', () => {
+        // The defect this pins: blanking the larger part asked `1 + ? = 3` and `? + 1 = 3`, i.e. 2
+        // twice, and one key cleared the whole family. The pass now also ends with `3 + ? = 3` (0).
         const pass = buildPass(3, makeRng(11));
         const asked = pass.map((item) => (item.blankField === 'num1' ? item.num1 : item.num2));
 
-        expect(asked.slice().sort()).toEqual([1, 2]);
+        expect(asked.slice().sort()).toEqual([0, 1, 2]);
         expect(pass.every((item) => item.blankField === 'num2')).toBe(true);
     });
 
-    it('AC10 every family asks each part exactly once', () => {
+    it('AC10 every family asks each part exactly once, from 0 through total-1', () => {
         // Read the ASKED value off blankField rather than assuming which operand is blank: otherwise
         // this test would restate the implementation and pass for a rule it never checked.
         const askedBy = (item) => (item.blankField === 'num1' ? item.num1 : item.num2);
@@ -147,21 +156,22 @@ describe('anchor totals 3 and 4', () => {
         for (const total of [3, 4, 5, 10]) {
             const asked = buildPass(total, makeRng(3)).map(askedBy).sort((a, b) => a - b);
             expect(asked, `total ${total}`).toEqual(
-                Array.from({ length: total - 1 }, (_, index) => index + 1)
+                Array.from({ length: total }, (_, index) => index)
             );
         }
     });
 
-    it('AC3 a make-four pass is its three ordered pairs', () => {
+    it('AC3 a make-four pass is all four ordered pairs, including 4+0', () => {
         const pass = buildPass(4, makeRng(7));
 
-        expect(pass).toHaveLength(3);
-        expect(itemKeys(pass)).toEqual(['1+3', '2+2', '3+1'].sort());
+        expect(pass).toHaveLength(4);
+        expect(itemKeys(pass)).toEqual(['1+3', '2+2', '3+1', '4+0'].sort());
 
         const byPair = new Map(pass.map((item) => [`${item.num1}+${item.num2}`, item]));
         expect(byPair.get('1+3')).toMatchObject({ answer: 4, blankField: 'num2', kind: 'bond' });
         expect(byPair.get('2+2')).toMatchObject({ answer: 4, blankField: 'num2', kind: 'bond' });
         expect(byPair.get('3+1')).toMatchObject({ answer: 4, blankField: 'num2', kind: 'bond' });
+        expect(byPair.get('4+0')).toMatchObject({ answer: 4, blankField: 'num2', kind: 'bond' });
     });
 });
 
