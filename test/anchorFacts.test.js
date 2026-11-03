@@ -126,49 +126,50 @@ describe('useMathGame anchor mode', () => {
         vi.useRealTimers();
     });
 
-    it('starts make-ten with a 9-item round and a 1..10 keypad', () => {
+    it('starts make-ten with a 10-item round and a 0..10 keypad', () => {
         game.setMode('anchor');
 
         expect(game.mode.value).toBe('anchor');
         expect(game.anchorTotal.value).toBe(10);
-        expect(game.roundLength.value).toBe(9);
+        expect(game.roundLength.value).toBe(10);
         expect(game.keypadMax.value).toBe(10);
+        expect(game.keypadKeys.value).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
         expect(game.blankField.value).not.toBe('answer');
     });
 
-    it('advances the round on its own 9 items, not on the cumulative solved count', () => {
+    it('advances the round on its own 10 items, not on the cumulative solved count', () => {
         game.setMode('anchor');
         game.problemsSolved.value = 4;
 
-        for (let i = 0; i < 9; i++) {
+        for (let i = 0; i < 10; i++) {
             answerCorrect(game);
-            if (i < 8) vi.advanceTimersByTime(AUTO_ADVANCE);
+            if (i < 9) vi.advanceTimersByTime(AUTO_ADVANCE);
         }
 
-        expect(game.problemsSolved.value).toBe(13);
-        expect(game.roundProgress.value).toBe(9);
+        expect(game.problemsSolved.value).toBe(14);
+        expect(game.roundProgress.value).toBe(10);
 
         // The timer alone does not start a new round; closing the celebration
         // (or resetProgress) is what clears the completed counter.
         vi.advanceTimersByTime(AUTO_ADVANCE);
-        expect(game.roundProgress.value).toBe(9);
-        expect(game.roundLength.value).toBe(9);
+        expect(game.roundProgress.value).toBe(10);
+        expect(game.roundLength.value).toBe(10);
 
         game.resetProgress();
         expect(game.roundProgress.value).toBe(0);
     });
 
-    it('ignores the step setting and still covers 1..9 as the other operand', () => {
+    it('ignores the step setting and still covers 0..9 as the other operand', () => {
         game.setStep('1');
         game.setMode('anchor');
 
         const seen = [num2For(game)];
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 9; i++) {
             game.generateNewProblem();
             seen.push(num2For(game));
         }
 
-        expect(seen.sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        expect(seen.sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
     });
 
     it('derives the keypad from the family even when the stored limit is 5', () => {
@@ -235,13 +236,13 @@ describe('useMathGame anchor mode', () => {
 
         expect(game.anchorTotal.value).toBe(5);
         expect(game.keypadMax.value).toBe(5);
-        expect(game.roundLength.value).toBe(8);
+        expect(game.roundLength.value).toBe(10);
         expect(generations).toBe(1);
 
         game.setAnchorTotal(10);
         expect(game.anchorTotal.value).toBe(10);
         expect(game.keypadMax.value).toBe(10);
-        expect(game.roundLength.value).toBe(9);
+        expect(game.roundLength.value).toBe(10);
     });
 
     it('clears a pending hold timer and generates once on a family change', () => {
@@ -260,7 +261,7 @@ describe('useMathGame anchor mode', () => {
         expect(generations).toBe(1);
         expect(vi.getTimerCount()).toBe(0);
         expect(game.anchorTotal.value).toBe(5);
-        expect(game.roundLength.value).toBe(8);
+        expect(game.roundLength.value).toBe(10);
     });
 
     it('does not serve the last bond again as the first bond of the next pass', () => {
@@ -334,18 +335,18 @@ describe('App anchor mode', () => {
         localStorage.clear();
     });
 
-    it('renders 1..10 and a matching grid with a stored limit of 5', async () => {
+    it('renders 0..10 and a matching grid with a stored limit of 5', async () => {
         const wrapper = await mountApp({ mode: 'anchor', maxLimit: 5 });
 
         const buttons = wrapper.findAll('.touchpad-btn');
-        expect(buttons).toHaveLength(10);
-        // a bond's parts are never zero, so the anchor keypad keeps its 1..total for now
-        expect(wrapper.find('[data-key="0"]').exists()).toBe(false);
+        expect(buttons).toHaveLength(11);
+        // a bond pass ends with "the frame is full, how many more?" — 0 — so zero is a key
+        expect(wrapper.find('[data-key="0"]').exists()).toBe(true);
         expect(buttons.map((button) => button.text())).toEqual(
-            ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
+            ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
         );
         expect(wrapper.find('.touchpad').attributes('style')).toContain('repeat(4');
-        expect(wrapper.findAll('.step')).toHaveLength(9);
+        expect(wrapper.findAll('.step')).toHaveLength(10);
         expect(wrapper.find('.anchor-summary').text()).toContain('first-try here means the frame was read');
         expect(JSON.parse(localStorage.getItem(STORAGE_KEY)).maxLimit).toBe(5);
 
@@ -467,8 +468,8 @@ describe('App anchor mode', () => {
         await selectMode(wrapper, 'Make 10');
 
         expect(wrapper.vm.mode).toBe('anchor');
-        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(10);
-        expect(wrapper.findAll('.step')).toHaveLength(9);
+        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(11);
+        expect(wrapper.findAll('.step')).toHaveLength(10);
         expect(JSON.parse(localStorage.getItem(STORAGE_KEY)).mode).toBe('anchor');
 
         wrapper.unmount();
@@ -484,7 +485,7 @@ describe('App anchor mode', () => {
         await wrapper.find('.limit-actions .action-btn:last-child').trigger('click');
         await wrapper.vm.$nextTick();
 
-        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(10);
+        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(11);
         expect(JSON.parse(localStorage.getItem(STORAGE_KEY)).maxLimit).toBe(20);
 
         await selectMode(wrapper, 'Find the total');

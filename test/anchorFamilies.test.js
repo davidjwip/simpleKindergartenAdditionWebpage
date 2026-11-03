@@ -137,30 +137,37 @@ describe('anchor family lengths', () => {
         expect(numericTotal({ total: 5 })).toBe(5);
         expect(numericTotal(10)).toBe(10);
 
-        expect(roundLengthForTotal('make-five')).toBe(8);
-        expect(roundLengthForTotal('make-ten')).toBe(9);
-        expect(roundLengthForTotal('doubles')).toBe(5);
+        expect(roundLengthForTotal('make-five')).toBe(10);
+        expect(roundLengthForTotal('make-ten')).toBe(10);
+        expect(roundLengthForTotal('doubles')).toBe(10);
 
-        expect(trackLengthForTotal('make-five')).toBe(8);
-        expect(trackLengthForTotal('make-ten')).toBe(9);
-        expect(trackLengthForTotal('doubles')).toBe(5);
+        expect(trackLengthForTotal('make-five')).toBe(10);
+        expect(trackLengthForTotal('make-ten')).toBe(10);
+        expect(trackLengthForTotal('doubles')).toBe(10);
     });
 
-    it('rejects a name that is not a known family', () => {
+    it('rejects an unknown family at every entry point, and the round is ten for the real ones', () => {
         expect(() => numericTotal('make-seven')).toThrow(RangeError);
+        // The round length no longer depends on the family, but it still validates it: a typo must
+        // fail here rather than become a silently playable round.
         expect(() => roundLengthForTotal('make-seven')).toThrow(RangeError);
         expect(() => trackLengthForTotal('make-seven')).toThrow(RangeError);
+
+        for (const family of [3, 4, 'make-five', 'make-ten', 'doubles']) {
+            expect(roundLengthForTotal(family)).toBe(10);
+            expect(trackLengthForTotal(family)).toBe(10);
+        }
     });
 
-    it('builds a four-item make-five pass that asks all four parts', () => {
+    it('builds a five-item make-five pass that asks all five parts, 0..4', () => {
         const pass = buildPass('make-five', makeRng(3));
 
-        expect(pass).toHaveLength(4);
+        expect(pass).toHaveLength(5);
         expect(pass.map((item) => `${item.num1}+${item.num2}`).sort()).toEqual([
-            '1+4', '2+3', '3+2', '4+1'
+            '1+4', '2+3', '3+2', '4+1', '5+0'
         ]);
         expect(pass.filter((item) => item.blankField === 'num1')).toHaveLength(0);
-        expect(pass.map((item) => item.num2).sort()).toEqual([1, 2, 3, 4]);
+        expect(pass.map((item) => item.num2).sort()).toEqual([0, 1, 2, 3, 4]);
         for (const item of pass) {
             expect(item.answer).toBe(5);
             expect(item.kind).toBe('bond');
@@ -202,12 +209,12 @@ describe('anchor family selection in the game', () => {
         vi.useRealTimers();
     });
 
-    it('switches to doubles with a five-item round', () => {
+    it('switches to doubles with a ten-item round', () => {
         game.setMode('anchor');
         game.setAnchorKind('doubles');
 
         expect(game.anchorKind.value).toBe('doubles');
-        expect(game.roundLength.value).toBe(5);
+        expect(game.roundLength.value).toBe(10);
         expect(game.keypadMax.value).toBe(10);
         expect(game.frameKind.value).toBe('doubles');
     });
@@ -220,7 +227,7 @@ describe('anchor family selection in the game', () => {
 
         expect(game.anchorKind.value).toBe('bond');
         expect(game.anchorTotal.value).toBe(5);
-        expect(game.roundLength.value).toBe(8);
+        expect(game.roundLength.value).toBe(10);
         expect(game.keypadMax.value).toBe(5);
         expect(game.frameKind.value).toBe('bond');
     });
@@ -364,10 +371,10 @@ describe('pass and progress guards', () => {
             makeThree.setOperator('+');
             makeThree.setModeOption({ mode: 'anchor', anchorTotal: 3, anchorKind: 'bond' });
 
-            expect(makeThree.roundLength.value).toBe(4);
+            expect(makeThree.roundLength.value).toBe(10);
 
             const seen = [];
-            for (let i = 0; i < 4; i++) {
+            for (let i = 0; i < 10; i++) {
                 seen.push(`${gameItem(makeThree).num1}+${gameItem(makeThree).num2}`);
                 makeThree.fillValue(gameCorrectValue(makeThree));
                 vi.advanceTimersByTime(AUTO_ADVANCE);
@@ -385,16 +392,16 @@ describe('pass and progress guards', () => {
         game.setModeOption({ mode: 'anchor', anchorTotal: 5, anchorKind: 'bond' });
 
         const seen = [];
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 10; i++) {
             seen.push(gameItem(game));
             game.fillValue(gameCorrectValue(game));
             vi.advanceTimersByTime(AUTO_ADVANCE);
         }
 
         const order = (items) => items.map((item) => `${item.num1}+${item.num2}`);
-        const expectedPairs = ['1+4', '2+3', '3+2', '4+1'];
-        const firstBlock = order(seen.slice(0, 4));
-        const secondBlock = order(seen.slice(4));
+        const expectedPairs = ['1+4', '2+3', '3+2', '4+1', '5+0'];
+        const firstBlock = order(seen.slice(0, 5));
+        const secondBlock = order(seen.slice(5));
 
         // The contract is a permutation per pass plus a non-repeating boundary. Pinning the exact
         // order (or asserting the two passes differ) made this test depend on the shuffle: the
@@ -403,9 +410,39 @@ describe('pass and progress guards', () => {
         // release PR.
         expect([...firstBlock].sort()).toEqual([...expectedPairs].sort());
         expect([...secondBlock].sort()).toEqual([...expectedPairs].sort());
-        expect(new Set(firstBlock).size).toBe(4);
-        expect(new Set(secondBlock).size).toBe(4);
-        expect(firstBlock[3]).not.toBe(secondBlock[0]);
+        expect(new Set(firstBlock).size).toBe(5);
+        expect(new Set(secondBlock).size).toBe(5);
+        expect(firstBlock[4]).not.toBe(secondBlock[0]);
+    });
+
+    it('swaps the boundary when the next pass would open with the item just answered', () => {
+        // The guard only matters on a collision, which a random run hits about one time in five. Find
+        // a seed that collides, then drive the game with it: the swap must make the boundary differ.
+        let colliding = null;
+        for (let seed = 1; seed < 2000 && colliding === null; seed += 1) {
+            const rng = makeRng(seed);
+            const first = buildPass('make-five', rng);
+            const second = buildPass('make-five', rng);
+            const last = first[first.length - 1];
+            if (last.num1 === second[0].num1 && last.num2 === second[0].num2) {
+                colliding = seed;
+                // the premise, asserted: without the guard the boundary WOULD repeat
+                expect(`${last.num1}+${last.num2}`).toBe(`${second[0].num1}+${second[0].num2}`);
+            }
+        }
+        expect(colliding).not.toBeNull();
+
+        const g = useMathGame({ anchorRng: makeRng(colliding) });
+        g.setModeOption({ mode: 'anchor', anchorTotal: 5, anchorKind: 'bond' });
+        const seen = [];
+        for (let i = 0; i < 10; i += 1) {
+            const item = gameItem(g);
+            seen.push(`${item.num1}+${item.num2}`);
+            g.fillValue(gameCorrectValue(g));
+            vi.advanceTimersByTime(AUTO_ADVANCE);
+        }
+        // the unguarded engine would repeat here; the guard swaps the first two of the new pass
+        expect(seen[4]).not.toBe(seen[5]);
     });
 });
 
@@ -437,11 +474,11 @@ describe('settled round contract', () => {
         }
     });
 
-    it('celebrates exactly once at the eighth make-five item despite two misses', async () => {
+    it('celebrates exactly once at the tenth make-five item despite two misses', async () => {
         vi.useFakeTimers();
         try {
             const wrapper = await mountFamily('make-five');
-            expect(wrapper.vm.roundLength).toBe(8);
+            expect(wrapper.vm.roundLength).toBe(10);
 
             let fires = 0;
             const stop = watch(
@@ -451,10 +488,10 @@ describe('settled round contract', () => {
                 }
             );
 
-            await finishRound(wrapper, 8, [0, 1]);
+            await finishRound(wrapper, 10, [0, 1]);
             await nextTick();
 
-            expect(wrapper.vm.roundProgress).toBe(8);
+            expect(wrapper.vm.roundProgress).toBe(10);
             expect(wrapper.vm.celebrationVisible).toBe(true);
             expect(fires).toBe(1);
 
@@ -483,18 +520,18 @@ describe('settled round contract', () => {
         }
     });
 
-    it('celebrates at the ninth make-ten item when one item is missed', async () => {
+    it('celebrates at the tenth make-ten item when one item is missed', async () => {
         vi.useFakeTimers();
         try {
             const wrapper = await mountFamily('make-ten');
-            expect(wrapper.vm.roundLength).toBe(9);
+            expect(wrapper.vm.roundLength).toBe(10);
 
-            await finishRound(wrapper, 9, [0]);
+            await finishRound(wrapper, 10, [0]);
 
-            expect(wrapper.vm.roundProgress).toBe(9);
+            expect(wrapper.vm.roundProgress).toBe(10);
             // contract item 7: the revealed item advanced the round but never the score
-            expect(wrapper.vm.problemsSolved).toBe(8);
-            expect(wrapper.vm.totalProblems).toBe(9);
+            expect(wrapper.vm.problemsSolved).toBe(9);
+            expect(wrapper.vm.totalProblems).toBe(10);
             expect(wrapper.vm.celebrationVisible).toBe(true);
             expect(wrapper.find('.celebration-overlay').classes('visible')).toBe(true);
 
@@ -504,16 +541,16 @@ describe('settled round contract', () => {
         }
     });
 
-    it('celebrates at the fifth doubles item when one item is missed', async () => {
+    it('celebrates at the tenth doubles item when one item is missed', async () => {
         vi.useFakeTimers();
         try {
             const wrapper = await mountFamily('doubles');
-            expect(wrapper.vm.roundLength).toBe(5);
+            expect(wrapper.vm.roundLength).toBe(10);
 
-            await finishRound(wrapper, 5, [0]);
+            await finishRound(wrapper, 10, [0]);
 
-            expect(wrapper.vm.roundProgress).toBe(5);
-            expect(wrapper.findAll('.step')).toHaveLength(5);
+            expect(wrapper.vm.roundProgress).toBe(10);
+            expect(wrapper.findAll('.step')).toHaveLength(10);
             expect(wrapper.vm.celebrationVisible).toBe(true);
 
             wrapper.unmount();
@@ -526,13 +563,13 @@ describe('settled round contract', () => {
         vi.useFakeTimers();
         try {
             const wrapper = await mountFamily('make-five');
-            expect(wrapper.findAll('.step')).toHaveLength(8);
+            expect(wrapper.findAll('.step')).toHaveLength(10);
 
-            await finishRound(wrapper, 8);
+            await finishRound(wrapper, 10);
             await wrapper.vm.$nextTick();
 
-            expect(wrapper.vm.roundProgress).toBe(8);
-            expect(wrapper.findAll('.step.filled')).toHaveLength(8);
+            expect(wrapper.vm.roundProgress).toBe(10);
+            expect(wrapper.findAll('.step.filled')).toHaveLength(10);
 
             await wrapper.find('.celebration-close-btn').trigger('click');
             vi.advanceTimersByTime(CLOSE_DELAY);
@@ -549,7 +586,7 @@ describe('settled round contract', () => {
         }
     });
 
-    it('shows no celebration with seven of eight make-five items presented', async () => {
+    it('shows no celebration with seven of ten make-five items presented', async () => {
         vi.useFakeTimers();
         try {
             const wrapper = await mountFamily('make-five');
@@ -639,7 +676,7 @@ describe('seeded rng: the shuffle is reproducible when the test supplies it', ()
 
         const expectedFirst = buildPass('make-five', makeRng(seed)).map((i) => `${i.num1}+${i.num2}`);
         const seen = [];
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 5; i++) {
             const item = gameItem(seeded);
             seen.push(`${item.num1}+${item.num2}`);
             seeded.fillValue(gameCorrectValue(seeded));
@@ -654,7 +691,7 @@ describe('seeded rng: the shuffle is reproducible when the test supplies it', ()
             const g = useMathGame({ anchorRng: makeRng(seed) });
             g.setModeOption({ mode: 'anchor', anchorTotal: 5, anchorKind: 'bond' });
             const out = [];
-            for (let i = 0; i < 4; i++) {
+            for (let i = 0; i < 5; i++) {
                 const item = gameItem(g);
                 out.push(`${item.num1}+${item.num2}`);
                 g.fillValue(gameCorrectValue(g));
