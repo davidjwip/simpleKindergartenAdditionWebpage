@@ -21,6 +21,23 @@ function assertGeneratableLimit(maxLimit) {
 
 export const STEPS = ['1', '2', '3-5', 'any'];
 
+/**
+ * How often an ordinary item carries a zero operand.
+ *
+ * Zero is met, not drilled. Allowing it at an even rate over-samples it badly: the sum is what is
+ * constrained, so a third of limit-10 items become zero-involving (measured 30.7%) and half at
+ * limit 5 (50.1%) — a zero drill wearing an ordinary mode's clothes, and markedly easier arithmetic.
+ * One item in eight keeps it incidental.
+ *
+ * The stepped modes do not apply it: a step is the size of the number being added or taken away, and
+ * zero has no size.
+ */
+export const ZERO_RATE = 1 / 8;
+
+function wantsZero(step, rng) {
+    return step === 'any' && rng() < ZERO_RATE;
+}
+
 function assertStep(step) {
     if (!STEPS.includes(step)) {
         throw new RangeError(`Unknown step: ${step}`);
@@ -39,47 +56,62 @@ function stepCandidates(step) {
  * while num1 is the larger operand. Candidates stay below the limit so the
  * other operand always has room.
  */
-function pickStepValue(step, maxLimit) {
+function pickStepValue(step, maxLimit, rng = Math.random) {
     const candidates = stepCandidates(step).filter((value) => value < maxLimit);
     if (candidates.length === 0) {
         throw new RangeError(`Step ${step} cannot be generated at limit ${maxLimit}`);
     }
-    return candidates[Math.floor(Math.random() * candidates.length)];
+    return candidates[Math.floor(rng() * candidates.length)];
 }
 
-export function generateAddition(maxLimit, step = 'any') {
+export function generateAddition(maxLimit, step = 'any', rng = Math.random) {
     assertGeneratableLimit(maxLimit);
     assertStep(step);
 
     if (step !== 'any') {
-        const num2 = pickStepValue(step, maxLimit);
-        const num1 = Math.floor(Math.random() * (maxLimit - num2)) + 1;
+        const num2 = pickStepValue(step, maxLimit, rng);
+        const num1 = Math.floor(rng() * (maxLimit - num2)) + 1;
         return { num1, num2, answer: num1 + num2 };
+    }
+
+    if (wantsZero(step, rng)) {
+        // 0 + n or n + 0, never 0 + 0: an item with no numbers in it asks nothing.
+        const other = Math.floor(rng() * maxLimit) + 1;
+        return rng() < 0.5
+            ? { num1: 0, num2: other, answer: other }
+            : { num1: other, num2: 0, answer: other };
     }
 
     let num1, num2;
     do {
-        num1 = Math.floor(Math.random() * maxLimit) + 1;
-        num2 = Math.floor(Math.random() * maxLimit) + 1;
+        num1 = Math.floor(rng() * maxLimit) + 1;
+        num2 = Math.floor(rng() * maxLimit) + 1;
     } while (num1 + num2 > maxLimit);
     return { num1, num2, answer: num1 + num2 };
 }
 
-export function generateSubtraction(maxLimit, step = 'any') {
+export function generateSubtraction(maxLimit, step = 'any', rng = Math.random) {
     assertGeneratableLimit(maxLimit);
     assertStep(step);
 
     if (step !== 'any') {
-        const num2 = pickStepValue(step, maxLimit);
-        const num1 = num2 + 1 + Math.floor(Math.random() * (maxLimit - num2));
+        const num2 = pickStepValue(step, maxLimit, rng);
+        const num1 = num2 + 1 + Math.floor(rng() * (maxLimit - num2));
+        return { num1, num2, answer: num1 - num2 };
+    }
+
+    if (wantsZero(step, rng)) {
+        // n − 0 (take nothing away) or n − n (all gone, answer 0). 0 − 0 is unreachable at n >= 1.
+        const num1 = Math.floor(rng() * maxLimit) + 1;
+        const num2 = rng() < 0.5 ? 0 : num1;
         return { num1, num2, answer: num1 - num2 };
     }
 
     let num1, num2;
     do {
-        num1 = Math.floor(Math.random() * maxLimit) + 1;
-        num2 = Math.floor(Math.random() * num1);
-    } while (num2 === 0 || num1 === 1);
+        num1 = Math.floor(rng() * maxLimit) + 1;
+        num2 = 1 + Math.floor(rng() * Math.max(num1 - 1, 1));
+    } while (num1 < 2);
     return { num1, num2, answer: num1 - num2 };
 }
 
@@ -119,10 +151,10 @@ function blankFieldFor(operator, mode) {
  * Builds an item whose blank is chosen by the task mode, never at random.
  * step is a generation parameter and is deliberately not item data.
  */
-export function generateProblem(operator, limit, mode = 'result', step = 'any') {
+export function generateProblem(operator, limit, mode = 'result', step = 'any', rng = Math.random) {
     assertMode(operator, mode);
     assertStep(step);
-    const base = operator === '+' ? generateAddition(limit, step) : generateSubtraction(limit, step);
+    const base = operator === '+' ? generateAddition(limit, step, rng) : generateSubtraction(limit, step, rng);
     return {
         num1: base.num1,
         num2: base.num2,
@@ -156,8 +188,9 @@ export function testAddition(maxLimit, iterations = 100) {
     for (let i = 0; i < iterations; i++) {
         const problem = generateAddition(maxLimit);
         const passed =
-            problem.num1 >= 1 && problem.num2 >= 1 &&
+            problem.num1 >= 0 && problem.num2 >= 0 &&
             problem.num1 <= maxLimit && problem.num2 <= maxLimit &&
+            !(problem.num1 === 0 && problem.num2 === 0) &&
             problem.answer === problem.num1 + problem.num2 &&
             problem.answer <= maxLimit;
         results.push({ num1: problem.num1, num2: problem.num2, answer: problem.answer, passed });
@@ -172,9 +205,10 @@ export function testSubtraction(maxLimit, iterations = 100) {
     for (let i = 0; i < iterations; i++) {
         const problem = generateSubtraction(maxLimit);
         const passed =
-            problem.num1 >= 2 && problem.num2 >= 1 &&
-            problem.num1 <= maxLimit && problem.num2 <= maxLimit &&
-            problem.num1 > problem.num2 && problem.answer >= 1;
+            problem.num1 >= 1 && problem.num2 >= 0 &&
+            problem.num2 <= problem.num1 && problem.num1 <= maxLimit &&
+            problem.answer === problem.num1 - problem.num2 &&
+            problem.answer >= 0;
         results.push({ num1: problem.num1, num2: problem.num2, answer: problem.answer, passed });
         if (!passed) allPassed = false;
     }

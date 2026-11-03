@@ -72,7 +72,7 @@ Each increment is one PR: tests written first, then code; acceptance criteria as
 **Tests first.** Engine: `generateAddition(1)` and `generateSubtraction(1)` terminate (throw) rather than hang — bounded-iteration test. Preferences: corrupt JSON, non-numeric limit, limit below min / above max. Component: track step 10 lights at 10 solved; limit save generates exactly one new item; celebration opens with no pending timer and no discarded item generated behind it.
 
 **Acceptance criteria.**
-- Given localStorage contains a corrupt or non-finite limit, when the app loads, then the limit falls back to 10 and the keypad renders 1..10.
+- Given localStorage contains a corrupt or non-finite limit, when the app loads, then the limit falls back to 10 and the keypad renders 0..10 (11 keys; the `0` arrived with the built-in zero change, see `zero-inline.md`).
 - Given limit is set to any value in [5,20], when generators run, then no item hangs and all items respect the limit on operands and answer.
 - Given the child solves the 10th item, when the track renders, then step 10 lights before the celebration overlay.
 - Given the celebration is visible, when timers are inspected, then no auto-advance timer is pending.
@@ -94,7 +94,7 @@ Each increment is one PR: tests written first, then code; acceptance criteria as
 **Acceptance criteria.**
 - Given a fresh install, when the app loads, then every item asks for the result and no operand is ever blank.
 - Given an existing install with stored preferences lacking a mode field, when the app loads, then mode is `result` and play is identical to a fresh install.
-- Given mode is `result`, when 200 items are generated, then 100% have the answer blank and all other constraints (no zero, limit respected) hold.
+- Given mode is `result`, when 200 items are generated, then 100% have the answer blank and all other constraints hold (zero only through the zero path at ~1 in 8, never both operands zero, limit respected).
 
 **Risk / rollback.** Moderate: changes the item shape the engine returns, touching every consumer. Mitigated by the engine remaining pure and the tests asserting the old invariants still hold. Rollback = revert; old item shape restored.
 
@@ -275,7 +275,7 @@ mode id. Rollback: hide the mode; nothing else depends on it.
 | Per-item adaptivity (auto-difficulty) before measurement | There is no logged data to adapt from; adaptivity now would be a random-number generator with extra steps. Revisit after §6 logging has real play history |
 | Drag-and-drop counter manipulation | Tap interactions only; drag is a motor-skill confound at four and adds hit-testing complexity for no pedagogical gain |
 | Sums beyond 20 / limit above 20 | Every preschool source caps at 10; 20 already spans into Year 1 / Grade 1 (international-comparison.md) |
-| A zero key | Zero is never an operand, answer, or required blank by engine design (verified, audit §3); adding the key invites only wrong taps |
+| ~~A zero key~~ **Overturned 2026-11-01** | Zero is now built into the generators (see `zero-inline.md`): `n + 0`, `n − 0`, `n − n = 0`. A keypad without a `0` cannot answer `3 − 3 = ?` or `7 + ? = 7`, so the key is always present. The original objection — that it invites wrong taps — is answered by the rate rather than by absence: zero items are about one in eight, not a third |
 | Spoken prompts (this plan) | Largest lost affordance per evidence §6, but deferred: needs audio assets, a mute policy, and testing; candidate for a later increment |
 
 ## 5. Measuring progress and difficulty from real play

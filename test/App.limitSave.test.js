@@ -41,7 +41,7 @@ describe('App limit save', () => {
         const generations =
             spies.generateNewProblem.mock.calls.length + spies.setMaxLimit.mock.calls.length;
         expect(generations).toBe(1);
-        expect(wrapper.findAll('.touchpad-btn').length).toBe(20);
+        expect(wrapper.findAll('.touchpad-btn').length).toBe(21);
         wrapper.unmount();
     });
 
