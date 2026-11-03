@@ -67,10 +67,14 @@ generateDoubles(a) → { num1: a, num2: a, answer: 2*a, operator: '+', blankFiel
 
 - `answer` is the total for bonds and the sum for doubles, so the existing item shape and
   `evaluateAnswer` are unchanged. `kind` is the only new field; it tells the renderer one group or two.
-- **`blankField` is assigned, never random.** For a pair with `a ≠ b` the blank is the **larger**
-  operand (`1 + ? = 10`), so the bond reads the way it is normally spoken. That gives 2/2 in a make-5
-  pass and 4/5 in a make-10 pass — the asymmetry is a consequence of the rule, not a coin toss. `5 + 5`
-  has two identical presentations, so it blanks `num2` by convention.
+- **`blankField` is assigned, never random — and it is always the second part.** The pairs run
+  `num1 = 1 … total-1` with `num2 = total − num1`, so blanking `num2` makes a pass ask **every part
+  exactly once**: make-five reads `1 + ? = 5` (4) through `4 + ? = 5` (1). Blanking the *larger* part
+  instead — the rule until 2026-10-29 — asked 4,3,3,4 in make-five and **2,2 in make-three**, so a
+  small part was never an answer and the smallest family had a single answer that one keypad press
+  could produce. `5 + 5` appears twice as the same pair and blanks `num2` by the same rule. Found by
+  Dave on the UAT build; no test could see a round a constant strategy beats.
+
 - **`makeRng(seed)` is new and anchor-only.** `mathEngine.js` calls `Math.random()` inline today; those
   generators are untouched. The anchor pass and its shuffle take an rng as an argument — tests pass a
   fixed seed, production passes an entropy source, so no seed ever appears in stored data.

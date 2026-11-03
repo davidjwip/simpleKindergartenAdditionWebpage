@@ -178,6 +178,23 @@ describe('usePreferences', () => {
         wrapper.unmount();
     });
 
+    it('AC7 a stored total of three or four survives, an unsupported one falls back to ten', () => {
+        for (const total of [3, 4]) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ anchorTotal: total }));
+
+            const { wrapper, state } = mountPreferences();
+            expect(state.anchorTotal.value).toBe(total);
+            wrapper.unmount();
+            localStorage.clear();
+        }
+
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ anchorTotal: 7 }));
+
+        const { wrapper, state } = mountPreferences();
+        expect(state.anchorTotal.value).toBe(10);
+        wrapper.unmount();
+    });
+
     it('updates mode, total and kind in one setTaskOption call', () => {
         const { mode, anchorTotal, anchorKind, setTaskOption } = usePreferences();
 
