@@ -42,6 +42,11 @@ export function useMathGame(options = {}) {
     // Tests supply a seeded rng so a shuffle-dependent assertion is deterministic. The app passes
     // nothing, so production keeps seeding from the clock exactly as before.
     let anchorRng = options.anchorRng || null;
+    // Ordinary generation draws through this. Production leaves it undefined and Math.random is used;
+    // a test supplies a scripted function, so an assertion about a specific item never depends on the
+    // shuffle (and never needs to mock the global).
+    // Wrapped, not captured: a test that stubs Math.random after mount must still be honoured.
+    const randomSource = options.rng || (() => Math.random());
     // Problem state
     const num1 = ref('');
     const num2 = ref('');
@@ -114,11 +119,21 @@ export function useMathGame(options = {}) {
         isAnchor.value && anchorKind.value === 'doubles' ? 'doubles' : 'bond'
     ));
 
-    const keypadLength = computed(() => (
+    // The highest key on the keypad. The ordinary keypad renders 0..keypadMax (one more key than
+    // this number); the grid is sized from keypadKeys.length, never from this value.
+    const keypadMax = computed(() => (
         isAnchor.value
             ? (anchorKind.value === 'doubles' ? 10 : anchorTotal.value)
             : effectiveMaxLimit.value
     ));
+
+    // Zero is a key wherever zero can be asked for: the ordinary modes ask it (n − n = 0, n + ? = n)
+    // and a bond pass now ends with "the frame is full, how many more?" — 0. So every keypad runs
+    // 0..max.
+    const keypadKeys = computed(() => {
+        const max = keypadMax.value;
+        return Array.from({ length: max + 1 }, (_, index) => index);
+    });
 
     const roundLength = computed(() => (
         isAnchor.value ? roundLengthForTotal(anchorFamily.value) : ORDINARY_ROUND_LENGTH
@@ -329,7 +344,7 @@ export function useMathGame(options = {}) {
             const maxAttempts = 10;
 
             do {
-                problem = generateProblem(operator.value, effectiveMaxLimit.value, mode.value, step.value);
+                problem = generateProblem(operator.value, effectiveMaxLimit.value, mode.value, step.value, randomSource);
 
                 currentProblem = {
                     num1: problem.num1,
@@ -593,7 +608,8 @@ export function useMathGame(options = {}) {
         anchorFamily,
         frameKind,
         frameTotal,
-        keypadLength,
+        keypadMax,
+        keypadKeys,
         roundLength,
         roundProgress,
         streak,

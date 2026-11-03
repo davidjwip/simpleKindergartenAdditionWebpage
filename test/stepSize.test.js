@@ -30,19 +30,22 @@ function stepValues(step) {
 
 function expectInvariants(problem, limit, operator) {
     expect(Object.keys(problem)).not.toContain('step');
-    expect(problem.num1).toBeGreaterThanOrEqual(1);
-    expect(problem.num2).toBeGreaterThanOrEqual(1);
-    expect(problem.answer).toBeGreaterThanOrEqual(1);
+    // Zero is a legal operand now (n + 0, n - 0, n - n), so the floor is 0 and the guards are
+    // "no item made of nothing" and "no negative answer".
+    expect(problem.num1).toBeGreaterThanOrEqual(0);
+    expect(problem.num2).toBeGreaterThanOrEqual(0);
+    expect(problem.answer).toBeGreaterThanOrEqual(0);
     expect(problem.num1).toBeLessThanOrEqual(limit);
     expect(problem.num2).toBeLessThanOrEqual(limit);
     expect(problem.answer).toBeLessThanOrEqual(limit);
-    expect(problem[problem.blankField]).toBeGreaterThanOrEqual(1);
+    expect(problem[problem.blankField]).toBeGreaterThanOrEqual(0);
     expect(problem[problem.blankField]).toBeLessThanOrEqual(limit);
+    expect(problem.num1 === 0 && problem.num2 === 0).toBe(false);
 
     if (operator === '+') {
         expect(problem.answer).toBe(problem.num1 + problem.num2);
     } else {
-        expect(problem.num1).toBeGreaterThan(problem.num2);
+        expect(problem.num1).toBeGreaterThanOrEqual(problem.num2);
         expect(problem.answer).toBe(problem.num1 - problem.num2);
     }
 }

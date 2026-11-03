@@ -203,7 +203,7 @@ describe('I6 progress surface (component)', () => {
 
             for (let i = 0; i < 5; i++) {
                 const { correct } = currentSolution(wrapper);
-                await wrapper.findAll('.touchpad-btn')[correct - 1].trigger('click');
+                await wrapper.find(`[data-key="${Number(correct)}"]`).trigger('click');
                 await wrapper.vm.$nextTick();
                 if (i < 4) {
                     vi.advanceTimersByTime(AUTO_ADVANCE);
@@ -219,7 +219,7 @@ describe('I6 progress surface (component)', () => {
 
             const { correct } = currentSolution(wrapper);
             const wrong = correct === 1 ? 2 : 1;
-            await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+            await wrapper.find(`[data-key="${Number(wrong)}"]`).trigger('click');
             await wrapper.vm.$nextTick();
 
             expect(wrapper.vm.streak).toBe(0);

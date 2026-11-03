@@ -39,8 +39,13 @@ changes is the *fact set* and the *representation*.
 | Equation | `7 + ? = 10` (or `? + 2 = 10`) | `3 + ? = 5` | `4 + 4 = ?` |
 | Frame shows | 7 filled in group A, 3 outlined empty | 3 filled, 2 empty | 4 group A + 4 group B, no empty |
 | What the child does | counts the empty cells, taps the number | same | reads or counts the two groups, taps the total |
-| Keypad | 1 … 10 | 1 … 5 | 1 … 10 |
-| Round | one pass of 9 | **two passes of 4** | one pass of 5 |
+| Keypad | 0 … 10 | 0 … 5 | 0 … 10 (shared: a doubles pass never asks 0) |
+| Round | 10 items (one pass) | 10 items (**two passes of 5**) | 10 items (**two passes of 5**) |
+
+Ten is not a multiple of the make-3 (3) or make-4 (4) pass, so those rounds end mid-pass and the pairs
+inside them are served 3 or 4 times depending on where the round stops. Accepted deliberately: the
+round is a goal rather than a pass, the passes keep cycling across rounds so coverage evens out, and
+a child counts items rather than monitoring fairness.
 
 Rules the screens must obey:
 
@@ -68,12 +73,13 @@ generateDoubles(a) → { num1: a, num2: a, answer: 2*a, operator: '+', blankFiel
 - `answer` is the total for bonds and the sum for doubles, so the existing item shape and
   `evaluateAnswer` are unchanged. `kind` is the only new field; it tells the renderer one group or two.
 - **`blankField` is assigned, never random — and it is always the second part.** The pairs run
-  `num1 = 1 … total-1` with `num2 = total − num1`, so blanking `num2` makes a pass ask **every part
-  exactly once**: make-five reads `1 + ? = 5` (4) through `4 + ? = 5` (1). Blanking the *larger* part
-  instead — the rule until 2026-10-29 — asked 4,3,3,4 in make-five and **2,2 in make-three**, so a
-  small part was never an answer and the smallest family had a single answer that one keypad press
-  could produce. `5 + 5` appears twice as the same pair and blanks `num2` by the same rule. Found by
-  Dave on the UAT build; no test could see a round a constant strategy beats.
+  `num1 = 1 … total` with `num2 = total − num1`, so blanking `num2` makes a pass ask **every part
+  exactly once, including zero**: make-five reads `1 + ? = 5` (4) through `5 + ? = 5` (0). The last
+  pair is the frame already full — "how many more?" — which is why a bond pass needs a zero key.
+  Blanking the *larger* part instead — the rule until 2026-10-29 — asked 4,3,3,4 in make-five and
+  **2,2 in make-three**, so a small part was never an answer and the smallest family had a single
+  answer that one keypad press could produce. Found by Dave on the UAT build; no test could see a
+  round a constant strategy beats.
 
 - **`makeRng(seed)` is new and anchor-only.** `mathEngine.js` calls `Math.random()` inline today; those
   generators are untouched. The anchor pass and its shuffle take an rng as an argument — tests pass a
@@ -83,23 +89,21 @@ generateDoubles(a) → { num1: a, num2: a, answer: 2*a, operator: '+', blankFiel
 
 | Family | Ordered pairs | Items in a round | Round shape |
 |---|---|---|---|
-| total 10 | 1+9 … 9+1 (9) | 9 | one pass — one short of an ordinary round |
-| total 5 | 1+4, 2+3, 3+2, 4+1 (4) | 8 | **two passes of 4**, each independently shuffled, no in-pass repeat |
-| doubles | 1+1 … 5+5 (5) | 5 | one pass |
+| total 10 | 1+9 … 10+0 (10) | 10 | one pass of 10 |
+| total 5 | 1+4 … 5+0 (5) | 10 | **two passes of 5**, each independently shuffled, no in-pass repeat |
+| doubles | 1+1 … 5+5 (5) | 10 | **two passes of 5** |
 
-Two-pass make-5 exists for the celebration cadence: a single 4-item round would fire the overlay every
-four taps, and the celebration is the app's only reward — inflating it cheapens it for every mode. The
-celebration itself — mascot, copy, overlay — is identical across families; only round length and track
-differ.
+Make-5 and doubles take two passes of five to fill the same ten-item round as make-10. One round length
+for the whole anchor mode is one fewer thing for a child to meet. The celebration itself — mascot, copy,
+overlay — is identical across families.
 
-- **Zero is excluded**, consistently with the engine: `0 + 5` is never asked. A real gap (0 is a 1N2
-  concept); recorded rather than papered over.
-- **Effective keypad length is mode-derived.** The keypad is `v-for="n in maxLimit"` today
-  (`App.vue:269`) and its grid is `repeat(ceil(sqrt(maxLimit)))` (`App.vue:267`). Anchor mode computes
-  an **effective** length equal to the family total and renders buttons *and grid* from it; the stored
-  `maxLimit` is never read or written here, and leaving the mode restores the previous keypad exactly. A
-  `limit` change made while anchor is active changes nothing on screen and still persists for the other
-  modes.
+- **Zero is asked once per bond pass**, and only as the second part: the final pair is `total + 0 =
+  total`, "the frame is full, how many more?" — zero. `0 + total` is never asked, and doubles never
+  ask for zero.
+- **Effective keypad length is mode-derived.** The keypad renders `0 … keypadMax` in every mode, and the
+  anchor family sets its max to the family total (ten for doubles). Its grid is sized from the key list,
+  never from the stored `maxLimit`; leaving the mode restores the previous keypad exactly. A `limit`
+  change made while anchor is active changes nothing on screen and still persists for the other modes.
 - **`step` is ignored** while anchor is active; a `step` change made during a pass takes effect only on
   return to a step-consuming mode.
 - **Transitions are atomic.** Changing mode or family mid-pass clears every pending timer, discards the
@@ -113,24 +117,24 @@ one retry, reveal never increments `problemsSolved`, keypad locked through REVEA
 entering RETRY. The reveal additionally **fills the empty cells and completes the equation**
 (`3 + **2** = 5`), because the frame is where the fact lives.
 
-Progress: the track renders the **round**, not ten fixed cells — 9 for make-10, 4 per pass for make-5
-(two passes back to back), 5 for doubles. Track length is a function of the active family and changes
-atomically with it. A round completion fires the celebration; the next round is a fresh shuffle.
+Progress: the track renders the **round** — ten cells for every family. Make-10 fills it with one pass;
+make-5 and doubles fill it with two passes of five, back to back. Track length changes atomically with
+the family. A round completion fires the celebration; the next round is a fresh shuffle.
 
 ## 5. Acceptance criteria
 
 **3c-1 — make-ten only (first PR):**
 
-1. Given "Make 10" is selected, when a round starts, then it is 9 items covering all nine ordered pairs
-   exactly once, and a second round is produced by re-invoking the shuffle (the mechanism is asserted,
-   never "a different order happened" — §6).
+1. Given "Make 10" is selected, when a round starts, then it is 10 items covering all ten ordered pairs
+   exactly once, including `10 + 0`, and a second round is produced by re-invoking the shuffle (the
+   mechanism is asserted, never "a different order happened" — §6).
 2. Given any bond item, then filled cells equal the shown operand, empty cells equal the required answer,
    and their sum equals `total`.
-3. Given any make-ten item, then the blank rule of §3 holds: 4 items blank `num1`, 5 blank `num2`, and
-   `5 + 5` blanks `num2`.
+3. Given any make-ten item, then the blank rule of §3 holds: every item blanks `num2`, so the asked parts
+   run `10 … 0`, and the final `10 + 0` pair asks for zero.
 4. Given the child taps the number of empty cells, then the item scores correct; after two failures the
    reveal fills the cells and completes the equation.
-5. Given the stored limit is 5 and "Make 10" is selected, then the keypad renders 1 … 10, the grid
+5. Given the stored limit is 5 and "Make 10" is selected, then the keypad renders 0 … 10, the grid
    follows that length, and `maxLimit` in storage is unchanged.
 6. Given anchor is active, when the adult changes `limit`, then the keypad does not change on screen and
    the stored preference still round-trips on leaving the mode.
@@ -144,12 +148,12 @@ atomically with it. A round completion fires the celebration; the next round is 
 
 **3c-2 — make-five and doubles (second PR):**
 
-11. Given "Make 5", then the round is 8 items as two passes of 4, each shuffled independently, with no
-    in-pass repeat and the 2/2 blank rule holding.
+11. Given "Make 5", then the round is 10 items as two passes of 5, each shuffled independently, with no
+    in-pass repeat, every item blanking the second part, and each pass ending in `5 + 0`.
 12. Given a doubles item, then the frame draws two groups of `a` cells in the two accent shades and the
     blank is the answer; only totals ≤ 10 are generated (6+6 is out — the keypad cannot reach 12).
-13. Given "Make 5" or "doubles", then the track renders 4 (per pass) or 5 cells and the celebration is
-    the same overlay every other mode uses.
+13. Given "Make 5" or "doubles", then the track renders ten cells and the celebration is the same overlay
+    every other mode uses.
 14. Given operator − is selected, when the adult opens the picker, then anchor families are shown
     disabled with one line ("making 5 and 10 is adding") — advice plus a disabled option, not a hidden
     one.
@@ -157,12 +161,13 @@ atomically with it. A round completion fires the celebration; the next round is 
 ## 6. Tests to write first
 
 **`test/anchorEngine.test.js` (new)**
-- `buildPass` per family: 9 / 8-in-two-passes-of-4 / 5 items, every ordered pair exactly once per pass, no
-  in-pass repeat, blank rule per §3 (4/5 at total 10 including the `5+5` convention; 2/2 at total 5),
-  `answer === total`, zero never generated.
+- `buildPass` per family: 10 / 5 / 5 items per pass (make-ten, make-five, doubles); every ordered pair
+  exactly once per pass; no in-pass repeat; blank rule per §3 (every item blanks `num2`, so the asked
+  parts run `total-1 … 0`); `answer === total` for bonds; zero only as the final `total + 0` pair. A
+  round is ten items for every family.
 - Seeded reproducibility: the same seed yields the same order; a new round is asserted by the shuffle
   being re-invoked with a new seed and the seeded orders differing — never by "a different order
-  happened", which repeats by chance one time in 24 for a 4-item pass.
+  happened", which repeats by chance one time in 120 for a 5-item pass.
 
 **`test/useMathGame.test.js` (extend)**
 - Round advances on its own length, not on `problemsSolved`; celebration on round completion; second
@@ -174,7 +179,7 @@ atomically with it. A round completion fires the celebration; the next round is 
 
 **`test/App.test.js` (extend)**
 - Frame cell counts and states for a bond and for a doubles item; empty cells outlined; the reveal fills
-  them; keypad is 1 … total and the grid matches; anchor options disabled under −.
+  them; keypad is 0 … total and the grid matches; anchor options disabled under −.
 
 **`test/usePreferences.test.js` (extend)** — `anchorTotal` / `anchorKind` round-trip, invalid ⇒ 10 /
 `bond`.

@@ -36,8 +36,10 @@ export function numericTotal(family) {
 }
 
 function pairsFor(total) {
+    // num1 runs to `total`, so the last pair is (total, 0): "the frame is already full, how many
+    // more?" — the one place a bond asks for zero, and the reason the anchor keypad needs a 0.
     const pairs = [];
-    for (let num1 = 1; num1 < total; num1++) {
+    for (let num1 = 1; num1 <= total; num1++) {
         pairs.push({ num1, num2: total - num1 });
     }
     return pairs;
@@ -63,10 +65,18 @@ export function makeRng(seed = Date.now()) {
     };
 }
 
+export const ANCHOR_ROUND = 10;
+
 export function roundLengthForTotal(family) {
-    if (resolvesToDoubles(family)) return DOUBLES_MAX;
-    const total = numericTotal(family);
-    return total === 10 ? 9 : (total - 1) * 2;
+    // Ten for every family: make-3 cycles its three-item pass, make-4 its four, make-10 fills the
+    // round with one pass, and doubles takes two passes of five. One round length for the whole
+    // anchor mode is one fewer thing for a child to meet.
+    //
+    // Always validated, even though the answer no longer depends on the family: numericTotal throws
+    // for an unknown name and for an unsupported total, including one carried by a doubles family —
+    // otherwise a typo in the picker becomes a silently playable round.
+    numericTotal(family);
+    return ANCHOR_ROUND;
 }
 
 export function trackLengthForTotal(family) {

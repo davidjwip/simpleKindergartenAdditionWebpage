@@ -21,7 +21,7 @@ const {
     anchorTotal,
     frameKind,
     frameTotal,
-    keypadLength,
+    keypadKeys,
     roundLength,
     roundProgress,
     streak,
@@ -190,11 +190,15 @@ const numeralCounters = computed(() => {
     if (!countersOn.value) return [];
     if (mode.value !== 'result' && mode.value !== 'part') return [];
 
+    // A visible numeral gets a row, including 0 — an empty row is how "nothing" looks. A blank
+    // field must not, which is why this filters on the raw text rather than on the number.
     return [
-        { field: 'num1', value: Number(num1.value) },
-        { field: 'num2', value: Number(num2.value) },
-        { field: 'answer', value: Number(answer.value) }
-    ].filter((counter) => Number.isFinite(counter.value) && counter.value > 0);
+        { field: 'num1', raw: num1.value },
+        { field: 'num2', raw: num2.value },
+        { field: 'answer', raw: answer.value }
+    ]
+        .filter((counter) => counter.raw !== '' && Number.isFinite(Number(counter.raw)))
+        .map((counter) => ({ field: counter.field, value: Number(counter.raw) }));
 });
 
 // "How to Use" instructions panel
@@ -512,6 +516,7 @@ function closeCelebration() {
                         stops at 10 so the dots stay countable.</li>
                     <li><strong>Name and mascot</strong> — kept on this device only, never sent anywhere.</li>
                 </ul>
+                <p><strong>Some questions are about nothing.</strong> Now and then a sum has a zero in it — 7 + 0, or 3 − 3 = 0, or a full frame asking how many more — so the keypad always has a 0. They turn up every so often rather than in a block, and they are there on purpose.</p>
                 <p><strong>A wrong answer gets one more try.</strong> After a second miss the correct sum is shown so the child can see how it works, then the next problem comes.</p>
                 <p><strong>Progress.</strong> Ten correct answers — or one pass through the facts — fills the track and brings the celebration. Misses never end the game; there is nothing here to fail.</p>
             </div>
@@ -567,10 +572,11 @@ function closeCelebration() {
             </div>
 
             <div class="touchpad-container">
-                <div class="touchpad" :style="{ gridTemplateColumns: `repeat(${Math.ceil(Math.sqrt(keypadLength))}, 1fr)` }">
+                <div class="touchpad" :style="{ gridTemplateColumns: `repeat(${Math.ceil(Math.sqrt(keypadKeys.length))}, 1fr)` }">
                     <button
-                        v-for="n in keypadLength"
+                        v-for="n in keypadKeys"
                         :key="n"
+                        :data-key="n"
                         class="touchpad-btn"
                         :disabled="isLocked"
                         @click="fillValue(n)"

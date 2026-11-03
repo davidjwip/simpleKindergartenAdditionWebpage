@@ -77,7 +77,7 @@ describe('feedback announcement', () => {
 
             expect(feedback.attributes('aria-live')).toBe('polite');
 
-            await wrapper.findAll('.touchpad-btn')[correct - 1].trigger('click');
+            await wrapper.find(`[data-key="${Number(correct)}"]`).trigger('click');
             await wrapper.vm.$nextTick();
 
             expect(wrapper.vm.feedback).not.toBe('');
@@ -98,7 +98,7 @@ describe('feedback announcement', () => {
 
             expect(feedback.attributes('aria-live')).toBe('polite');
 
-            await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+            await wrapper.find(`[data-key="${Number(wrong)}"]`).trigger('click');
             await wrapper.vm.$nextTick();
 
             expect(wrapper.vm.feedback).not.toBe('');

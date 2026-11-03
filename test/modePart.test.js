@@ -117,32 +117,33 @@ describe('generateProblem part mode', () => {
         for (const operator of ['+', '-']) {
             for (let i = 0; i < 200; i++) {
                 const problem = generateProblem(operator, limit, 'part');
-                expect(problem.num1).toBeGreaterThanOrEqual(1);
-                expect(problem.num2).toBeGreaterThanOrEqual(1);
-                expect(problem.answer).toBeGreaterThanOrEqual(1);
+                expect(problem.num1).toBeGreaterThanOrEqual(0);
+                expect(problem.num2).toBeGreaterThanOrEqual(0);
+                expect(problem.answer).toBeGreaterThanOrEqual(0);
                 expect(problem.num1).toBeLessThanOrEqual(limit);
                 expect(problem.num2).toBeLessThanOrEqual(limit);
                 expect(problem.answer).toBeLessThanOrEqual(limit);
-                expect(problem[problem.blankField]).toBeGreaterThanOrEqual(1);
+                expect(problem[problem.blankField]).toBeGreaterThanOrEqual(0);
                 expect(problem[problem.blankField]).toBeLessThanOrEqual(limit);
+                expect(problem.num1 === 0 && problem.num2 === 0).toBe(false);
 
                 if (operator === '+') {
                     expect(problem.answer).toBe(problem.num1 + problem.num2);
                 } else {
-                    expect(problem.num1).toBeGreaterThan(problem.num2);
-                    expect(problem.num1).toBeGreaterThanOrEqual(2);
+                    expect(problem.num1).toBeGreaterThanOrEqual(problem.num2);
                     expect(problem.answer).toBe(problem.num1 - problem.num2);
                 }
             }
         }
     });
 
-    it('never generates a degenerate subtraction in part mode', () => {
+    it('allows only the two zero shapes subtraction has, and never a negative answer', () => {
         for (let i = 0; i < 1000; i++) {
             const problem = generateProblem('-', 10, 'part');
-            expect(problem.num1).not.toBe(problem.num2);
-            expect(problem.num1).not.toBe(1);
-            expect(problem.answer).not.toBe(0);
+            expect(problem.num1).toBeGreaterThanOrEqual(problem.num2);
+            if (problem.num2 === 0) expect(problem.answer).toBe(problem.num1);
+            if (problem.answer === 0) expect(problem.num2).toBe(problem.num1);
+            expect(problem.num1 === 0 && problem.num2 === 0).toBe(false);
         }
     });
 });
@@ -160,6 +161,36 @@ describe('useMathGame part mode', () => {
 
     afterEach(() => {
         vi.useRealTimers();
+    });
+
+    it('asks for 0 whenever a part-mode blank lands on the zero operand', () => {
+        // The contract as an implication, so it cannot flake: whenever a zero operand sits in the
+        // blank position, the value the child must supply is 0.
+        // Compare the STRING: a blank field holds '' and Number('') === 0, so a numeric check would
+        // pass on every item and prove nothing.
+        // Find an item whose blank is a zero part, then actually answer it with 0 — the claim is that
+        // the app asks for it AND accepts it, not merely that such items exist.
+        let askedForZero = false;
+        for (let i = 0; i < 800 && !askedForZero; i += 1) {
+            game.generateNewProblem();
+            const blank = game.blankField.value;
+            const a = Number(game.num1.value);
+            const b = Number(game.num2.value);
+            const c = Number(game.answer.value);
+            // The blank field holds '', so the value the child must supply is derived, not read.
+            const truth = {
+                num1: blank === 'num1' ? c - b : a,
+                num2: blank === 'num2' ? c - a : b,
+                answer: blank === 'answer' ? a + b : c
+            };
+            if (game.operator.value === '+' && truth[blank] === 0) {
+                askedForZero = true;
+                const solvedBefore = game.problemsSolved.value;
+                game.fillValue(0);
+                expect(game.problemsSolved.value).toBe(solvedBefore + 1);
+            }
+        }
+        expect(askedForZero).toBe(true);
     });
 
     it('derives the part-whole bar from the whole, the known part and the gap', () => {
@@ -335,9 +366,9 @@ describe('part mode boundaries and mode changes', () => {
                     game.generateNewProblem();
                     const solution = solutionFor(game);
                     const missing = correctValue(solution);
-                    expect(missing).toBeGreaterThanOrEqual(1);
+                    expect(missing).toBeGreaterThanOrEqual(0);
                     expect(missing).toBeLessThanOrEqual(limit);
-                    expect(game.keypadLength.value).toBe(limit);
+                    expect(game.keypadMax.value).toBe(limit);
                 }
             }
         }
@@ -431,7 +462,7 @@ describe('App part mode', () => {
     it('keeps the bar inside the keypad limit at limit 5', async () => {
         const wrapper = await mountPartApp({ limit: 5 });
 
-        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(5);
+        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(6);
 
         for (let i = 0; i < 50; i++) {
             wrapper.vm.generateNewProblem();
@@ -453,10 +484,10 @@ describe('App part mode', () => {
             const correct = correctValueFromApp(wrapper);
             const wrong = wrongFor(correct);
 
-            await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+            await wrapper.find(`[data-key="${Number(wrong)}"]`).trigger('click');
             vi.advanceTimersByTime(HOLD_DELAY);
             await wrapper.vm.$nextTick();
-            await wrapper.findAll('.touchpad-btn')[wrong - 1].trigger('click');
+            await wrapper.find(`[data-key="${Number(wrong)}"]`).trigger('click');
             await wrapper.vm.$nextTick();
 
             const inputs = wrapper.findAll('.problem input');

@@ -177,6 +177,34 @@ describe('App counters', () => {
         wrapper.unmount();
     });
 
+    it('gives a visible zero numeral its own empty countable row', async () => {
+        // The counters used to filter on value > 0, which is why a 0 numeral had no row at all.
+        // Force an item with a zero operand: 0 + 6 = ?
+        let call = 0;
+        let state = 987654321;
+        const spy = vi.spyOn(Math, 'random').mockImplementation(() => {
+            call += 1;
+            if (call === 1) return 0.01;   // zero path
+            if (call === 2) return 0.5;    // the other operand is 6
+            if (call === 3) return 0.1;    // and zero goes first: 0 + 6
+            state = (state * 1664525 + 1013904223) >>> 0;
+            return state / 4294967296;
+        });
+        try {
+            const wrapper = await mountApp({ mode: 'result', countersOn: true, maxLimit: 10 });
+            expect(String(wrapper.vm.num1)).toBe('0');
+            expect(String(wrapper.vm.num2)).toBe('6');
+
+            const rows = numeralRows(wrapper);
+            expect(rows).toHaveLength(2);
+            expect(rows.map((row) => Number(row.attributes('data-total')))).toEqual([0, 6]);
+            expect(rows.map(filledDots)).toEqual([0, 6]);
+            wrapper.unmount();
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
     it('renders no dots and leaves the equation and keypad untouched when counters are off', async () => {
         const wrapper = await mountApp({ mode: 'result', countersOn: false });
 
@@ -186,7 +214,7 @@ describe('App counters', () => {
         expect(
             wrapper.findAll('.problem input').map((input) => input.attributes('placeholder'))
         ).toEqual(['?', '?', '?']);
-        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(10);
+        expect(wrapper.findAll('.touchpad-btn')).toHaveLength(11);
 
         wrapper.unmount();
     });
@@ -197,11 +225,12 @@ describe('App counters', () => {
             const wrapper = await mountApp({ mode: 'result', countersOn: true, maxLimit: 10 });
             const correct = correctValueFromApp(wrapper);
 
-            expect(correct).toBeGreaterThanOrEqual(1);
-            expect(wrapper.findAll('.touchpad-btn')).toHaveLength(10);
+            // zero is a legal answer now (n − n = 0), so a correct zero must count
+            expect(correct).toBeGreaterThanOrEqual(0);
+            expect(wrapper.findAll('.touchpad-btn')).toHaveLength(11);
             expect(numeralRows(wrapper)).toHaveLength(2);
 
-            await wrapper.findAll('.touchpad-btn')[correct - 1].trigger('click');
+            await wrapper.find(`[data-key="${Number(correct)}"]`).trigger('click');
             await wrapper.vm.$nextTick();
 
             expect(wrapper.vm.problemsSolved).toBe(1);
