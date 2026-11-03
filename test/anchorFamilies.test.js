@@ -415,6 +415,50 @@ describe('pass and progress guards', () => {
         expect(firstBlock[4]).not.toBe(secondBlock[0]);
     });
 
+    it('rejects a doubles family carrying an unsupported total', () => {
+        // The doubles shortcut used to skip validation; this is the behaviour that changed.
+        expect(() => roundLengthForTotal({ kind: 'doubles', total: 7 })).toThrow(RangeError);
+        expect(() => trackLengthForTotal({ kind: 'doubles', total: 7 })).toThrow(RangeError);
+        expect(roundLengthForTotal({ kind: 'doubles', total: 10 })).toBe(10);
+    });
+
+    it('fills a doubles round with two passes of five, each double twice and never twice in a row', () => {
+        const g = useMathGame({ anchorRng: makeRng(4242) });
+        g.setModeOption({ mode: 'anchor', anchorKind: 'doubles' });
+        expect(g.roundLength.value).toBe(10);
+
+        const seen = [];
+        for (let i = 0; i < 10; i += 1) {
+            const item = gameItem(g);
+            seen.push(`${item.num1}+${item.num2}`);
+            if (seen.length > 1) expect(seen[seen.length - 1]).not.toBe(seen[seen.length - 2]);
+            g.fillValue(gameCorrectValue(g));
+            vi.advanceTimersByTime(AUTO_ADVANCE);
+        }
+
+        const counts = seen.reduce((acc, key) => ({ ...acc, [key]: (acc[key] || 0) + 1 }), {});
+        expect(Object.keys(counts).sort()).toEqual(['1+1', '2+2', '3+3', '4+4', '5+5']);
+        for (const key of Object.keys(counts)) {
+            expect(counts[key]).toBe(2);
+        }
+
+        // The adjacency rule must hold for every order, not just this seed's.
+        for (const seed of [1, 2, 3, 5, 8, 13, 21, 34]) {
+            const g2 = useMathGame({ anchorRng: makeRng(seed) });
+            g2.setModeOption({ mode: 'anchor', anchorKind: 'doubles' });
+            const order = [];
+            for (let i = 0; i < 10; i += 1) {
+                const item = gameItem(g2);
+                order.push(`${item.num1}+${item.num2}`);
+                g2.fillValue(gameCorrectValue(g2));
+                vi.advanceTimersByTime(AUTO_ADVANCE);
+            }
+            for (let i = 1; i < order.length; i += 1) {
+                expect(order[i], `seed ${seed} position ${i}`).not.toBe(order[i - 1]);
+            }
+        }
+    });
+
     it('swaps the boundary when the next pass would open with the item just answered', () => {
         // The guard only matters on a collision, which a random run hits about one time in five. Find
         // a seed that collides, then drive the game with it: the swap must make the boundary differ.

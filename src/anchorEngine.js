@@ -72,10 +72,10 @@ export function roundLengthForTotal(family) {
     // round with one pass, and doubles takes two passes of five. One round length for the whole
     // anchor mode is one fewer thing for a child to meet.
     //
-    // The family is still validated even though the answer no longer depends on it: an unsupported
-    // family must fail here as loudly as it fails in buildPass, or a typo in the picker becomes a
-    // silently playable round.
-    if (!resolvesToDoubles(family)) numericTotal(family);
+    // Always validated, even though the answer no longer depends on the family: numericTotal throws
+    // for an unknown name and for an unsupported total, including one carried by a doubles family —
+    // otherwise a typo in the picker becomes a silently playable round.
+    numericTotal(family);
     return ANCHOR_ROUND;
 }
 

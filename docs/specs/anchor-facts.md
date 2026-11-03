@@ -40,12 +40,12 @@ changes is the *fact set* and the *representation*.
 | Frame shows | 7 filled in group A, 3 outlined empty | 3 filled, 2 empty | 4 group A + 4 group B, no empty |
 | What the child does | counts the empty cells, taps the number | same | reads or counts the two groups, taps the total |
 | Keypad | 0 … 10 | 0 … 5 | 0 … 10 (shared: a doubles pass never asks 0) |
+| Round | 10 items (one pass) | 10 items (**two passes of 5**) | 10 items (**two passes of 5**) |
 
 Ten is not a multiple of the make-3 (3) or make-4 (4) pass, so those rounds end mid-pass and the pairs
 inside them are served 3 or 4 times depending on where the round stops. Accepted deliberately: the
 round is a goal rather than a pass, the passes keep cycling across rounds so coverage evens out, and
 a child counts items rather than monitoring fairness.
-| Round | 10 items (one pass) | 10 items (**two passes of 5**) | 10 items (**two passes of 5**) |
 
 Rules the screens must obey:
 
